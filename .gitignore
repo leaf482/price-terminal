@@ -1,0 +1,15 @@
+# Frontend dependencies and generated output
+/frontend/node_modules/
+/frontend/.next/
+/frontend/out/
+/frontend/next-env.d.ts
+/frontend/*.tsbuildinfo
+
+# Local configuration and logs
+.env*
+!.env.example
+npm-debug.log*
+
+# Local Go build output
+/backend/backend
+/backend/backend.exe
