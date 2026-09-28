@@ -64,127 +64,131 @@ Acceptance: collect one listing through the provider contract, validate the resu
 
 Acceptance: bound collection calls and isolate failures across listings/providers; record failures separately from observations. Verify a failing source does not block a healthy source or erase its last accepted data.
 
-### Task 13: First real provider adapter
+### Task 13: First real provider research/selection
 
-Acceptance: select and document a permitted source and supported listing context; parse a narrow supported set of price and stock facts using fixtures. Expose limitations and fail clearly on malformed data.
+Acceptance: evaluate an official API or permitted collection method, source policy/access constraints, rate limits, structured data stability, supported product/listing context, and known limitations. Produce a documented provider decision only; no provider implementation.
 
-### Task 14: First real provider ingestion validation
+### Task 14: First real provider adapter
 
-Acceptance: integrate the adapter into explicit single-listing collection; validate a representative permitted collection and persisted semantics, including provenance and unavailable fields. Keep routine tests fixture-based.
+Acceptance: implement the narrow selected provider with fixture-based parsing and tests for supported price and stock facts. Expose limitations and fail clearly on malformed data.
 
-### Task 15: Collection scheduling
+### Task 15: First real provider ingestion validation
+
+Acceptance: connect the adapter to the existing single-listing ingestion path; validate a representative permitted collection and persisted semantics, including provenance and unavailable fields. Keep routine tests fixture-based.
+
+### Task 16: Collection scheduling
 
 Acceptance: schedule tracked listings at a configurable interval with bounded work and defined overlap/restart behavior for one collector instance. Verify no unintended concurrent duplicate collection and clean shutdown.
 
 ## Current prices and frontend MVP
 
-### Task 16: Current-price queries
+### Task 17: Current-price queries
 
 Acceptance: return a coherent latest accepted observation with currency, stock, timestamp, and freshness; define out-of-order/tie behavior. Verify missing prices, no history, and stale observations without silently merging old fields.
 
-### Task 17: Frontend catalog view
+### Task 18: Frontend catalog view
 
 Acceptance: display API-backed products and their listings with loading, empty, and error states. Keep layout minimal and verify navigation against representative data.
 
-### Task 18: Frontend current-price view
+### Task 19: Frontend current-price view
 
 Acceptance: show distinct observed prices, currency, source link, stock, and freshness on a listing view; avoid misleading zero/default prices. Verify unknown and stale states.
 
 ## Historical prices
 
-### Task 19: Historical price API
+### Task 20: Historical price API
 
 Acceptance: expose bounded listing observations with stable ordering and time-range handling; preserve semantic price fields, currency, and stock. Verify range boundaries and empty results.
 
-### Task 20: Historical price chart
+### Task 21: Historical price chart
 
 Acceptance: chart a clearly labeled price series using the history API; expose timestamps and currency, and show gaps/unknown states honestly. Verify one-point, empty, and interrupted histories.
 
 ## Promotions, effective price, and MSRP
 
-### Task 21: Promotion evidence model and persistence
+### Task 22: Promotion evidence model and persistence
 
 Acceptance: store listing applicability, provenance, validity, and supported conditions while preserving historical evidence. Keep coupon, cashback, and membership concepts distinct; test unknown conditions.
 
-### Task 22: Promotion collection for one provider
+### Task 23: Promotion collection for one provider
 
 Acceptance: normalize a narrow promotion type from fixtures into preserved evidence through ingestion. Unsupported or ambiguous terms do not become invented executable discounts.
 
-### Task 23: Effective-price calculation
+### Task 24: Effective-price calculation
 
 Acceptance: calculate a limited documented scenario from explicit observation/promotion inputs using exact arithmetic and tested rounding; separate checkout reductions from cashback and reject unsupported combinations.
 
-### Task 24: Effective-price API and explanation
+### Task 25: Effective-price API and explanation
 
 Acceptance: expose derived results with input references, assumptions, exclusions, and conditional/unavailable states. Verify results remain distinct from observed prices.
 
-### Task 25: Promotion and effective-price display
+### Task 26: Promotion and effective-price display
 
 Acceptance: show applicable terms and calculation explanations without advertising conditional savings as universal. Verify unknown eligibility and potential cashback displays.
 
-### Task 26: MSRP provenance and comparisons
+### Task 27: MSRP provenance and comparisons
 
 Acceptance: validate explicit MSRP evidence end to end and label any MSRP-based comparison separately from retailer-list or historical comparisons. Never infer MSRP from an unlabeled crossed-out price. Reinforce semantics already required since Task 4.
 
 ## Alerts
 
-### Task 27: PriceAlert model and persistence
+### Task 28: PriceAlert model and persistence
 
 Acceptance: persist listing target, threshold/currency, price basis, stock/freshness rules, and enabled state; define inclusive threshold and re-arm behavior. Test invalid and ambiguous configurations.
 
-### Task 28: Alert configuration API
+### Task 29: Alert configuration API
 
 Acceptance: expose minimal alert configuration operations with validation and explicit ownership/access assumptions for the intended deployment. Choose the initial delivery destination model before delivery work.
 
-### Task 29: Alert evaluation
+### Task 30: Alert evaluation
 
 Acceptance: evaluate alerts against eligible observations with traceable decisions and duplicate suppression. Verify stale/missing data, stock rules, repeated collections, and conditional price scenarios.
 
-### Task 30: First notification delivery channel
+### Task 31: First notification delivery channel
 
 Acceptance: deliver evaluated alert events through one selected channel with durable attempt state, bounded retries, and documented duplicate-delivery handling. Test failures without sending real notifications.
 
-### Task 31: Alert frontend controls
+### Task 32: Alert frontend controls
 
 Acceptance: create, view, and disable alerts through the API; display threshold basis, conditions, and useful delivery status. Verify validation and error states.
 
 ## Additional providers and reliability
 
-### Task 32: Second provider
+### Task 33: Second provider
 
 Acceptance: add one independently tested provider through the existing contract, with documented supported contexts and limitations. Verify failures remain isolated; revise the abstraction only for demonstrated differences.
 
-### Task 33: Collection retry and rate-limit hardening
+### Task 34: Collection retry and rate-limit hardening
 
 Acceptance: refine backoff and source-specific rate behavior using actual provider failure categories; verify restart and repeated-failure behavior without unbounded retries.
 
-### Task 34: Operational visibility
+### Task 35: Operational visibility
 
 Acceptance: expose enough collection/delivery outcomes and timing information to diagnose failed or stale listings; document a small health-check procedure and verify logs omit secrets.
 
-### Task 35: Data-quality handling
+### Task 36: Data-quality handling
 
 Acceptance: add a minimal way to identify invalid accepted observations without modifying original facts, and define query/alert treatment. Verify traceability and historical promotion/calculation references remain intact.
 
-### Task 36: Backup and restore verification
+### Task 37: Backup and restore verification
 
 Acceptance: document and exercise database backup/restore on disposable data; verify products, listings, observations, and operational state needed for safe restart survive.
 
-### Task 37: Query and retention review
+### Task 38: Query and retention review
 
 Acceptance: measure representative current/history queries, address demonstrated bottlenecks with small changes, and document retention assumptions. Do not delete historical data or add new infrastructure without an explicit reviewed decision.
 
 ## Later product matching
 
-### Task 38: Matching requirements and evidence
+### Task 39: Matching requirements and evidence
 
 Acceptance: document supported identity/variant criteria and representative positive/negative examples for cross-retailer matching. Define review and correction needs before implementing automatic associations.
 
-### Task 39: Match suggestions
+### Task 40: Match suggestions
 
 Acceptance: propose candidate matches with explainable evidence against a small labeled sample; leave Product/Listing associations unchanged until reviewed.
 
-### Task 40: Reviewed match application
+### Task 41: Reviewed match application
 
 Acceptance: apply approved associations with an audit trail and a correction path; preserve listing identities and immutable observation history. Verify materially different variants are not silently merged.
 
