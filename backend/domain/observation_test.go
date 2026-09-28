@@ -12,7 +12,6 @@ func observationInput() domain.PriceObservationInput {
 		ListingID:  "l1",
 		ObservedAt: time.Date(2026, 9, 28, 12, 30, 0, 0, time.FixedZone("source", 9*60*60)),
 		Source:     "https://example.com/item",
-		Currency:   domain.USD,
 		Stock:      domain.StockUnknown,
 	}
 }
@@ -56,8 +55,6 @@ func TestObservationValidation(t *testing.T) {
 		{"missing time", func(i *domain.PriceObservationInput) { i.ObservedAt = time.Time{} }, false},
 		{"missing source", func(i *domain.PriceObservationInput) { i.Source = "" }, false},
 		{"blank source", func(i *domain.PriceObservationInput) { i.Source = "\t" }, false},
-		{"missing currency", func(i *domain.PriceObservationInput) { i.Currency = "" }, false},
-		{"unsupported currency", func(i *domain.PriceObservationInput) { i.Currency = "EUR" }, false},
 		{"prices mix currencies", func(i *domain.PriceObservationInput) {
 			i.SalePrice = &domain.Money{MinorUnits: 100, Currency: domain.USD}
 			i.OfferPrice = &domain.Money{MinorUnits: 100, Currency: domain.JPY}
@@ -81,8 +78,11 @@ func TestObservationValidation(t *testing.T) {
 				if err := observation.Validate(); err != nil {
 					t.Fatal(err)
 				}
-				if observation.ListingID() != input.ListingID || observation.Source() != input.Source || observation.Currency() != input.Currency || observation.Stock() != input.Stock {
+				if observation.ListingID() != input.ListingID || observation.Source() != input.Source || observation.Stock() != input.Stock {
 					t.Error("observation facts changed")
+				}
+				if currency, present := observation.Currency(); present || currency != "" {
+					t.Errorf("stock-only currency = %q, %v; want empty, false", currency, present)
 				}
 				if !observation.ObservedAt().Equal(input.ObservedAt) || observation.ObservedAt().Location() != time.UTC {
 					t.Error("observation time must preserve the instant in UTC")
@@ -124,7 +124,8 @@ func TestPriceRoleInvariants(t *testing.T) {
 				{"missing", nil, true},
 				{"zero", &domain.Money{Currency: domain.USD}, true},
 				{"positive", &domain.Money{MinorUnits: 500, Currency: domain.USD}, true},
-				{"mixed currency", &domain.Money{MinorUnits: 500, Currency: domain.JPY}, false},
+				{"JPY price", &domain.Money{MinorUnits: 500, Currency: domain.JPY}, true},
+				{"JPY zero", &domain.Money{Currency: domain.JPY}, true},
 				{"negative", &domain.Money{MinorUnits: -1, Currency: domain.USD}, false},
 				{"zero-value Money", &domain.Money{}, false},
 				{"unsupported currency", &domain.Money{Currency: "EUR"}, false},
@@ -138,6 +139,14 @@ func TestPriceRoleInvariants(t *testing.T) {
 					}
 					if !test.valid {
 						return
+					}
+					currency, present := observation.Currency()
+					if test.price == nil {
+						if present || currency != "" {
+							t.Errorf("missing prices gave currency %q, %v", currency, present)
+						}
+					} else if !present || currency != test.price.Currency {
+						t.Errorf("currency = %q, %v; want %q, true", currency, present, test.price.Currency)
 					}
 					for _, other := range priceRoles {
 						value, present := other.get(observation)
@@ -156,7 +165,6 @@ func TestSeparatePricesAndImmutability(t *testing.T) {
 	for _, currency := range []domain.Currency{domain.USD, domain.JPY} {
 		t.Run(string(currency), func(t *testing.T) {
 			input := observationInput()
-			input.Currency = currency
 			prices := []domain.Money{
 				{MinorUnits: 12000, Currency: currency},
 				{MinorUnits: 11000, Currency: currency},
@@ -194,6 +202,9 @@ func TestSeparatePricesAndImmutability(t *testing.T) {
 			}
 			if err := observation.Validate(); err != nil {
 				t.Fatal(err)
+			}
+			if got, present := observation.Currency(); !present || got != currency {
+				t.Errorf("currency after input mutation = %q, %v; want %q, true", got, present, currency)
 			}
 		})
 	}

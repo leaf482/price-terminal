@@ -32,7 +32,6 @@ type PriceObservationInput struct {
 	ListingID         string
 	ObservedAt        time.Time
 	Source            string
-	Currency          Currency
 	Stock             StockState
 	MSRP              *Money
 	MSRPSource        string
@@ -61,7 +60,6 @@ type PriceObservation struct {
 	listingID         string
 	observedAt        time.Time
 	source            string
-	currency          Currency
 	stock             StockState
 	msrp              observedMoney
 	msrpSource        string
@@ -75,7 +73,6 @@ func NewPriceObservation(input PriceObservationInput) (PriceObservation, error) 
 		listingID:         input.ListingID,
 		observedAt:        input.ObservedAt.UTC(),
 		source:            input.Source,
-		currency:          input.Currency,
 		stock:             input.Stock,
 		msrp:              copyPrice(input.MSRP),
 		msrpSource:        input.MSRPSource,
@@ -99,9 +96,6 @@ func (o PriceObservation) Validate() error {
 	if err := requireText("observation source", o.source); err != nil {
 		return err
 	}
-	if err := o.currency.Validate(); err != nil {
-		return err
-	}
 	if err := o.stock.Validate(); err != nil {
 		return err
 	}
@@ -112,6 +106,7 @@ func (o PriceObservation) Validate() error {
 	} else if strings.TrimSpace(o.msrpSource) != "" {
 		return fmt.Errorf("MSRP source requires an MSRP value")
 	}
+	currency, _ := o.Currency()
 	for _, price := range []struct {
 		name  string
 		price observedMoney
@@ -127,8 +122,8 @@ func (o PriceObservation) Validate() error {
 		if err := price.price.value.Validate(); err != nil {
 			return fmt.Errorf("%s: %w", price.name, err)
 		}
-		if price.price.value.Currency != o.currency {
-			return fmt.Errorf("%s currency does not match observation currency", price.name)
+		if price.price.value.Currency != currency {
+			return fmt.Errorf("%s currency does not match other observed prices", price.name)
 		}
 	}
 	return nil
@@ -137,9 +132,20 @@ func (o PriceObservation) Validate() error {
 func (o PriceObservation) ListingID() string     { return o.listingID }
 func (o PriceObservation) ObservedAt() time.Time { return o.observedAt }
 func (o PriceObservation) Source() string        { return o.source }
-func (o PriceObservation) Currency() Currency    { return o.currency }
 func (o PriceObservation) Stock() StockState     { return o.stock }
 func (o PriceObservation) MSRPSource() string    { return o.msrpSource }
+
+// Currency derives the shared currency from present prices. A stock-only
+// observation returns ("", false); an explicit zero price establishes currency.
+// Validate ensures all present prices use the same supported currency.
+func (o PriceObservation) Currency() (Currency, bool) {
+	for _, price := range [...]observedMoney{o.msrp, o.retailerListPrice, o.salePrice, o.offerPrice} {
+		if price.present {
+			return price.value.Currency, true
+		}
+	}
+	return "", false
+}
 
 // Price accessors return a presence flag; ignore the Money value when false.
 func (o PriceObservation) MSRP() (Money, bool) {
