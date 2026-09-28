@@ -9,6 +9,7 @@ Tracking features are planned; no application schema or tables exist yet.
 
 ```text
 backend/            Go HTTP server, PostgreSQL connection setup, and tests
+backend/migrations/ Versioned SQL migrations managed by Goose
 frontend/           Next.js App Router application with TypeScript and ESLint
 docs/               Project plan, architecture, domain model, workflow, and tasks
 docker-compose.yml  Local PostgreSQL only, with a persistent named volume
@@ -58,7 +59,7 @@ docker compose up -d --wait postgres
 The PostgreSQL 18.6 image stores data in the Compose-managed `postgres_data`
 named volume mounted at `/var/lib/postgresql`. Initialization settings apply only
 to an empty volume; changing `.env` does not change credentials in an existing
-database. No migrations or application tables are created.
+database. Container startup does not run migrations; apply them explicitly below.
 
 ## Backend
 
@@ -129,6 +130,104 @@ or loaded environment configuration:
 ```sh
 go test ./...
 ```
+
+## Database migrations
+
+Use the standalone [Goose CLI](https://github.com/pressly/goose), pinned to
+**v3.28.0**. It supplies SQL migration ordering, transactional execution, version
+metadata, status, and rollback without an ORM or a custom migration engine.
+Migration tooling is separate from the backend runtime: `backend/go.mod` and
+`backend/go.sum` do not gain migration dependencies.
+
+Install once, with unrelated database drivers excluded:
+
+```sh
+go install -tags='no_clickhouse,no_libsql,no_mssql,no_mysql,no_sqlite3,no_vertica,no_ydb' github.com/pressly/goose/v3/cmd/goose@v3.28.0
+```
+
+Building this CLI requires Go 1.26 or newer. With Go's default automatic
+toolchain selection, the install command downloads a compatible toolchain if
+needed; it does not change the backend's Go 1.25 requirement. If automatic
+toolchain downloads are disabled, use Go 1.26+ for this installation.
+
+Ensure the Go binary directory (`GOBIN`, or `go env GOPATH` plus `/bin` when
+`GOBIN` is unset) is on `PATH`. For the default installation location, add it
+to the current shell:
+
+```powershell
+$env:Path = "$(go env GOPATH)\bin;$env:Path"
+```
+
+Bash equivalent: `export PATH="$(go env GOPATH)/bin:$PATH"`.
+Confirm the installed version with `goose -version` (expected v3.28.0).
+
+### Apply, inspect, rollback, and reapply
+
+Run these commands from the repository root with PostgreSQL running and `.env`
+created as described above:
+
+```sh
+goose -env .env -dir backend/migrations -timeout 30s postgres "application_name=price_terminal_migrations connect_timeout=5" up
+goose -env .env -dir backend/migrations -timeout 30s postgres "application_name=price_terminal_migrations connect_timeout=5" status
+goose -env .env -dir backend/migrations -timeout 30s postgres "application_name=price_terminal_migrations connect_timeout=5" version
+```
+
+Goose loads `.env` directly. Its PostgreSQL driver uses the same `PGHOST`,
+`PGPORT`, `PGDATABASE`, `PGUSER`, `PGPASSWORD`, and `PGSSLMODE` configuration as
+the backend. Already-exported variables take precedence over `.env`. The quoted
+argument adds only an application label and a five-second connection timeout;
+it contains no credentials. No second credentials file or database URL is needed.
+
+`up` applies pending migrations in order. Repeating it at the latest version is
+a safe no-op. To roll back the latest migration and reapply it:
+
+```sh
+goose -env .env -dir backend/migrations -timeout 30s postgres "application_name=price_terminal_migrations connect_timeout=5" down
+goose -env .env -dir backend/migrations -timeout 30s postgres "application_name=price_terminal_migrations connect_timeout=5" up
+```
+
+The initial file, `backend/migrations/00001_migration_bootstrap.sql`, contains
+`-- +goose Up` and `-- +goose Down` sections that each execute `SELECT 1;`.
+Its purpose is to prove the workflow. It creates no application objects.
+Goose owns `public.goose_db_version` and its supporting primary-key index and
+sequence. After `up`, version is 1; after `down`, version is 0 and the metadata
+table remains. Migration SQL and its version update run in one transaction by
+default. Do not edit applied migration files; add a new numbered file instead.
+
+### Fresh disposable database
+
+The following commands create a separate empty database on the same local
+PostgreSQL instance. They do not reset the normal development database or volume.
+Run from the repository root. Creation intentionally fails if the database name
+already exists; choose a new disposable name rather than dropping unknown data.
+
+```sh
+docker compose up -d --wait postgres
+docker compose exec -T postgres sh -c 'createdb --username "$POSTGRES_USER" --template template0 price_terminal_migration_check'
+goose -env .env -dir backend/migrations -timeout 30s postgres "dbname=price_terminal_migration_check application_name=price_terminal_migrations connect_timeout=5" up
+goose -env .env -dir backend/migrations -timeout 30s postgres "dbname=price_terminal_migration_check application_name=price_terminal_migrations connect_timeout=5" status
+goose -env .env -dir backend/migrations -timeout 30s postgres "dbname=price_terminal_migration_check application_name=price_terminal_migrations connect_timeout=5" version
+```
+
+Only the target database name is overridden; host, port, user, password, and TLS
+still come from the existing configuration. Repeat the same disposable-target
+command with `up`, `down`, then `up` to check no-op, rollback, and reapply.
+Use these read-only checks to inspect metadata and confirm zero application tables:
+
+```sh
+docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d price_terminal_migration_check -c "TABLE public.goose_db_version;"'
+echo "SELECT count(*) FROM pg_catalog.pg_tables WHERE schemaname NOT IN ('pg_catalog', 'information_schema') AND NOT (schemaname = 'public' AND tablename = 'goose_db_version');" | docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d price_terminal_migration_check -At'
+```
+
+After verifying a database that you created specifically for this check, remove
+only that disposable database:
+
+```sh
+docker compose exec -T postgres sh -c 'dropdb --username "$POSTGRES_USER" price_terminal_migration_check'
+```
+
+Ordinary `go test ./...` in `backend/` does not run migrations and still works
+with PostgreSQL stopped. Migrations are never run automatically at HTTP startup.
 
 ## Frontend
 
