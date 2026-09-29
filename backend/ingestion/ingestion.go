@@ -1,6 +1,7 @@
-// Package ingestion collects and persists one listing at a time. Providers never
-// receive the store. Scheduling, automatic retries, and failure recording belong
-// outside this component; errors are returned without creating failure observations.
+// Package ingestion collects and persists listings through single-listing attempts
+// and bounded sequential batches. Providers never receive the store. Scheduling,
+// automatic retries, and persistent failure recording remain outside this package;
+// errors are returned without creating failure observations.
 package ingestion
 
 import (
