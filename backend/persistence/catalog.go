@@ -41,6 +41,36 @@ func (s *Store) GetProduct(ctx context.Context, id string) (domain.Product, erro
 	return product, nil
 }
 
+const MaxProductListLimit = 100
+
+// ListProducts returns at most limit products in stable primary-key order.
+// Callers must explicitly select a bound; zero never means an unbounded query.
+func (s *Store) ListProducts(ctx context.Context, limit int) ([]domain.Product, error) {
+	if limit < 1 || limit > MaxProductListLimit {
+		return nil, fmt.Errorf("list products: limit must be between 1 and %d", MaxProductListLimit)
+	}
+	rows, err := s.db.QueryContext(ctx, `SELECT id, name, brand, model FROM products ORDER BY id LIMIT $1`, limit)
+	if err != nil {
+		return nil, fmt.Errorf("list products: %w", err)
+	}
+	defer rows.Close()
+	products := make([]domain.Product, 0)
+	for rows.Next() {
+		var p domain.Product
+		if err := rows.Scan(&p.ID, &p.Name, &p.Brand, &p.Model); err != nil {
+			return nil, fmt.Errorf("list products: %w", err)
+		}
+		if err := p.Validate(); err != nil {
+			return nil, fmt.Errorf("list products: %w", err)
+		}
+		products = append(products, p)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("list products: %w", err)
+	}
+	return products, nil
+}
+
 func (s *Store) InsertRetailer(ctx context.Context, retailer domain.Retailer) error {
 	if err := retailer.Validate(); err != nil {
 		return fmt.Errorf("insert retailer: %w", err)

@@ -6,6 +6,8 @@ import (
 	"log"
 	"net/http"
 	"time"
+
+	"github.com/leaf482/price-terminal/backend/persistence"
 )
 
 func healthHandler(w http.ResponseWriter, r *http.Request) {
@@ -27,10 +29,14 @@ func readinessHandler(ping func(context.Context) error) http.HandlerFunc {
 	}
 }
 
-func newHandler(ping func(context.Context) error) http.Handler {
+func newHandler(ping func(context.Context) error, products productStore) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", healthHandler)
 	mux.HandleFunc("GET /readyz", readinessHandler(ping))
+	api := productAPI{store: products}
+	mux.HandleFunc("POST /products", api.create)
+	mux.HandleFunc("GET /products/{id}", api.get)
+	mux.HandleFunc("GET /products", api.list)
 	return mux
 }
 
@@ -49,7 +55,7 @@ func run() error {
 
 	server := &http.Server{
 		Addr:              "127.0.0.1:8080",
-		Handler:           newHandler(db.PingContext),
+		Handler:           newHandler(db.PingContext, persistence.New(db)),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 

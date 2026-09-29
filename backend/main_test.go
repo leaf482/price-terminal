@@ -40,7 +40,7 @@ func TestRoutes(t *testing.T) {
 	} {
 		t.Run(test.method+" "+test.path, func(t *testing.T) {
 			recorder := httptest.NewRecorder()
-			newHandler(func(context.Context) error { return nil }).ServeHTTP(recorder, httptest.NewRequest(test.method, test.path, nil))
+			newHandler(func(context.Context) error { return nil }, nil).ServeHTTP(recorder, httptest.NewRequest(test.method, test.path, nil))
 			if recorder.Code != test.status {
 				t.Errorf("status = %d, want %d", recorder.Code, test.status)
 			}
@@ -70,7 +70,7 @@ func TestReadiness(t *testing.T) {
 				return test.err
 			}
 			recorder := httptest.NewRecorder()
-			newHandler(ping).ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/readyz", nil))
+			newHandler(ping, nil).ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/readyz", nil))
 			if !called || recorder.Code != test.status || recorder.Body.String() != test.body {
 				t.Errorf("called=%v status=%d body=%q; want true, %d, %q", called, recorder.Code, recorder.Body.String(), test.status, test.body)
 			}
@@ -84,7 +84,7 @@ func TestHealthDoesNotPingDatabase(t *testing.T) {
 		return nil
 	}
 	recorder := httptest.NewRecorder()
-	newHandler(ping).ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/healthz", nil))
+	newHandler(ping, nil).ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/healthz", nil))
 	if recorder.Code != http.StatusOK || recorder.Body.String() != "ok\n" {
 		t.Errorf("status=%d body=%q; want 200 and ok", recorder.Code, recorder.Body.String())
 	}
@@ -101,7 +101,7 @@ func TestReadinessPropagatesCancellation(t *testing.T) {
 	}
 	recorder := httptest.NewRecorder()
 	request := httptest.NewRequest(http.MethodGet, "/readyz", nil).WithContext(ctx)
-	newHandler(ping).ServeHTTP(recorder, request)
+	newHandler(ping, nil).ServeHTTP(recorder, request)
 	if recorder.Code != http.StatusServiceUnavailable {
 		t.Errorf("status=%d, want 503", recorder.Code)
 	}
