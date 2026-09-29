@@ -141,7 +141,12 @@ func (r *Runtime) cycle(ctx context.Context) {
 			r.finish(target.ListingID, err)
 			continue
 		}
-		jobs = append(jobs, ingestion.Job{Listing: listing, ResultID: rand.Text(), Provider: target.Provider})
+		jobs = append(jobs, ingestion.Job{
+			Listing: listing, ResultID: rand.Text(), Provider: target.Provider,
+			OnComplete: func(outcome ingestion.Outcome) {
+				r.finish(outcome.Listing.ID, outcome.Err)
+			},
+		})
 	}
 	outcomes, err := ingestion.Run(ctx, r.store, jobs, r.timeout)
 	if err != nil && len(outcomes) == 0 {
@@ -149,8 +154,5 @@ func (r *Runtime) cycle(ctx context.Context) {
 			r.finish(job.Listing.ID, err)
 		}
 		return
-	}
-	for _, outcome := range outcomes {
-		r.finish(outcome.Listing.ID, outcome.Err)
 	}
 }

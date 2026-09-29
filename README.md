@@ -325,8 +325,10 @@ Collection status is **in memory** and resets at restart: `never_attempted`,
 `collecting`, `success`, or `failed` for active Listings; otherwise `inactive`.
 It includes last attempt and last successful persistence times when available.
 Failures use the safe code `collection_failed`, preserve the last success, and
-never create a PriceObservation. State is published after batch completion;
-collection timestamps describe runtime activity, not the source observation time.
+never create a PriceObservation. Each Listing's outcome is published when its
+ingestion completes, before the next Listing starts; later slow or failing Listings
+do not delay its success timestamp. Collection timestamps describe runtime activity,
+not the source observation time.
 No schema change or durable collection-run history is introduced.
 
 Read the two JSON endpoints:

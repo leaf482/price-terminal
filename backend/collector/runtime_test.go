@@ -214,3 +214,44 @@ func TestDeadlineDoesNotStopHealthyListing(t *testing.T) {
 		<-done
 	})
 }
+
+func TestSuccessTimeDoesNotWaitForLaterListing(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		s, fake := fixtures(t)
+		slow := providerFunc(func(ctx context.Context, _ domain.Listing) (domain.PriceObservation, error) {
+			select {
+			case <-time.After(10 * time.Second):
+				return domain.PriceObservation{}, errors.New("delayed failure")
+			case <-ctx.Done():
+				return domain.PriceObservation{}, ctx.Err()
+			}
+		})
+		r, err := collector.New(s, []collector.Target{{ListingID: "a", Provider: fake}, {ListingID: "b", Provider: slow}}, time.Hour, time.Minute)
+		if err != nil {
+			t.Fatal(err)
+		}
+		ctx, cancel := context.WithCancel(context.Background())
+		done := make(chan error, 1)
+		completedAt := time.Now().UTC()
+		go func() { done <- r.Run(ctx) }()
+		defer func() { cancel(); <-done }()
+		synctest.Wait()
+		assertSuccessTime := func() {
+			t.Helper()
+			status := r.Status("a")
+			if status.State != "success" || status.LastSuccessfulAt == nil || !status.LastSuccessfulAt.Equal(completedAt) {
+				t.Fatalf("A completion = %+v, want success at %s", status, completedAt)
+			}
+		}
+		assertSuccessTime()
+		if r.Status("b").State != "collecting" || len(s.writes) != 1 {
+			t.Fatal("B should still be blocked after A persisted")
+		}
+		time.Sleep(10 * time.Second)
+		synctest.Wait()
+		assertSuccessTime()
+		if r.Status("b").State != "failed" || len(s.writes) != 1 {
+			t.Fatal("B failure must not create an observation")
+		}
+	})
+}

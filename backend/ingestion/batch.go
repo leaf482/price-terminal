@@ -17,6 +17,9 @@ type Job struct {
 	Listing  domain.Listing
 	ResultID string
 	Provider provider.Provider
+	// OnComplete, when set, runs synchronously after this job's outcome is
+	// determined, before the next job starts (including cancellation outcomes).
+	OnComplete func(Outcome)
 }
 
 // Outcome corresponds to the input job at the same index. Err == nil indicates
@@ -74,6 +77,9 @@ func Run(ctx context.Context, store Store, jobs []Job, perListingTimeout time.Du
 			}
 		}
 		outcomes[index] = outcome
+		if job.OnComplete != nil {
+			job.OnComplete(outcome)
+		}
 	}
 	return outcomes, ctx.Err()
 }
