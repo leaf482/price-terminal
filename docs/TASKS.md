@@ -66,11 +66,13 @@ Acceptance: bound collection calls and isolate failures across listings/provider
 
 ### Task 13: First real provider research/selection
 
-Acceptance: evaluate an official API or permitted collection method, source policy/access constraints, rate limits, structured data stability, supported product/listing context, and known limitations. Produce a documented provider decision only; no provider implementation.
+Acceptance: compare a manageable candidate set using official access, price/identity/currency capability, historical-retention rights, rate limits, structured data stability, and product/listing fit. Record PROMISING, BLOCKED, or NEEDS CLARIFICATION with evidence; rank only PROMISING candidates. Complete a focused access/retention/model-fit gate before selecting an implementation target. Produce documentation only; no provider implementation. See the [candidate sweep and feasibility decisions](PROVIDER_RESEARCH.md#provider-candidate-sweep--task-17).
+
+The user-directed feasibility reviews labeled Tasks 14–17 in that decision log precede adapter implementation. They do not mark the implementation tasks below complete or renumber the remaining roadmap.
 
 ### Task 14: First real provider adapter
 
-Acceptance: implement the narrow selected provider with fixture-based parsing and tests for supported price and stock facts. Expose limitations and fail clearly on malformed data.
+Acceptance: only after the provider feasibility gate passes, implement the narrow selected provider with fixture-based parsing and tests for supported price and stock facts. Expose limitations and fail clearly on malformed data.
 
 ### Task 15: First real provider ingestion validation
 

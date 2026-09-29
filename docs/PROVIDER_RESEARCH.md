@@ -1,7 +1,7 @@
 # Provider access feasibility
 
-Latest review: [eBay, Task 16](#ebay-access-feasibility--task-16).
-The earlier Best Buy and Dell decisions are retained below for traceability.
+Latest review: [candidate sweep, Task 17](#provider-candidate-sweep--task-17).
+The earlier individual feasibility decisions are retained below for traceability.
 
 ## Best Buy access feasibility — Task 14
 
@@ -449,3 +449,273 @@ readable Browse schema. Documented capabilities are not live-data verification.
 The decision does not depend on assuming credentials are unavailable. Prior
 Best Buy/Dell outcomes, [domain semantics](DOMAIN_MODEL.md),
 [architecture](ARCHITECTURE.md), and provider interfaces remain unchanged.
+
+## Provider candidate sweep — Task 17
+
+Checked: 2026-09-29. Nine candidates across retail, manufacturers, marketplaces,
+commerce platforms, and open price datasets. Three existing candidates are
+rechecked baselines; six are newly compared here. Candidates were chosen for
+documented price interfaces or explicit data-reuse grants, not popularity.
+
+This requested research task supersedes current-price query work for this turn.
+Roadmap IDs are unchanged. The provider-selection gate in [TASKS.md](TASKS.md)
+now records this sweep; no adapter is approved or implemented.
+
+### Classification and evidence rules
+
+- **PROMISING:** practical documented access and affirmative reuse rights support
+  historical retention. Worth a focused feasibility task; not implementation
+  approval. Remaining data/model constraints must be stated.
+- **BLOCKED:** published restrictions conflict with this project's intended use
+  under the default terms. A negotiated exception would be a new decision.
+- **NEEDS CLARIFICATION:** material rights, source access, or suitability remain
+  unresolved. Public responses and missing cache limits are not permission.
+
+Raw-response storage, temporary caches, and normalized historical observations
+are separate uses. Converting a price to minor units does not by itself remove
+source-license restrictions. Conversely, an affirmative open-data grant to copy,
+transform, and reuse data can support history without a special cache exception.
+All licenses still require compliance with their conditions.
+
+The summaries below concern published capabilities. No accounts, credentials,
+merchant agreements, live authenticated requests, or support submissions were
+made. An unknown quota means unverified, not unlimited. Stable source IDs identify
+records within their source context; they are not automatic Product matches or
+guarantees against future identifier changes.
+
+### 1. Best Buy Products API — BLOCKED
+
+- **Access/data:** developer registration and API key; SKU-based lookup, current
+  `salePrice`, `regularPrice`, and online availability are documented. New key
+  issuance remains unverified. US pricing context would need an explicit USD
+  mapping; do not infer currency from a number alone.
+  [Products reference](https://bestbuyapis.github.io/api-documentation/).
+- **Limits/retention:** 5 calls/second and 50,000/day per key. Storage/caching is
+  limited to 72 hours for faster display. This covers Content, not only raw JSON;
+  no historical-observation exception is established.
+  [API terms](https://developer.bestbuy.com/legal).
+- **Practicality/restrictions:** narrow SKU fixtures would be easy technically,
+  but default retention conflicts with history. The
+  [Task 14 decision](#best-buy-access-feasibility--task-14) remains in force.
+
+### 2. Dell Premier Catalog API — BLOCKED
+
+- **Access/data:** Premier customer context, procurement integration, and Dell
+  activation; OAuth credentials. Catalog/configuration identity and negotiated
+  pricing are documented, with country/currency context. Public-store identity,
+  exact response currency, and reliable stock mapping remain unverified.
+  [Catalog overview](https://developer.dell.com/apis/42342cfa-92ad-48f2-818c-b9922ac24e8e/versions/2.0.0).
+- **Limits:** no numeric Catalog quota or self-service sandbox was established;
+  do not borrow Quote API limits.
+- **Retention/restrictions:** internal-business licensing and deletion of API
+  Application Data on termination conflict with the intended public, retained
+  history. Normalization is not an established exemption.
+  [API terms, sections 4, 5, and 8](https://i.dell.com/sites/csdocuments/Legal_Docs/en/us/api-terms-of-use_en.pdf).
+- **Practicality:** customer-specific onboarding/data make this a poor independent
+  developer starting point. [Task 15](#dell-access-feasibility--task-15) records
+  the schema/auth documentation limitations; access denial is not assumed.
+
+### 3. eBay Browse API — BLOCKED
+
+- **Access/data:** developer keys, OAuth application token, and separate Buy
+  production approval; exact item/variation IDs, price/currency, seller context,
+  and estimated availability are documented.
+  [Requirements](https://developer.ebay.com/api-docs/buy/buy-requirements.html),
+  [Browse schema](https://developer.ebay.com/develop/api/spec/browse_api.json).
+- **Limits:** default 5,000/day for Browse methods except `getItems`, which has
+  its own 5,000/day allocation; account entitlement remains unverified.
+  [Call limits](https://developer.ebay.com/develop/get-started/api-call-limits).
+- **Retention/restrictions:** content-removal and post-termination destruction
+  duties conflict with permanent history; dated charts also raise unresolved
+  display/analytics questions. No normalized-price exemption was established.
+  [API license, sections 8 and 16](https://developer.ebay.com/join/api-license-agreement).
+- **Practicality:** sandbox/fixtures and fixed-price, new-condition scope help
+  testing, but cannot resolve policy. Seller, variation, and shipping context
+  remain important. [Task 16](#ebay-access-feasibility--task-16) has the details.
+
+### 4. Amazon Creators API — BLOCKED
+
+- **Access:** Associates enrollment, API registration/credentials, and qualifying
+  sales. Current eligibility documentation specifies ten qualifying sales in
+  the preceding 30 days; this is not an unconditional hobby-developer key.
+  [Prerequisites](https://affiliate-program.amazon.com/creatorsapi/docs/),
+  [Eligibility errors](https://affiliate-program.amazon.com/creatorsapi/docs/en-us/troubleshooting/error-codes-and-messages).
+- **Data:** ASIN lookup through GetItems; OffersV2 supplies price/currency,
+  availability, seller, and reference-price context. ASIN alone does not fix a
+  seller/condition offer; saving basis is not automatically MSRP.
+  [OffersV2](https://affiliate-program.amazon.com/creatorsapi/docs/en-us/api-reference/resources/offersV2).
+- **Limits/testing:** documented initial maximum 1 request/second and 8,640/day
+  for 30 days, then sales-linked allocations/access. Use examples/fixtures only
+  until eligible credentials exist.
+  [API rates](https://affiliate-program.amazon.com/creatorsapi/docs/en-us/concepts/api-rates).
+- **Retention/restrictions:** Participation Requirements 3(y) prohibit price
+  tracking/alerts unless Amazon agrees otherwise. The license permits non-image
+  advertising-content caching up to 24 hours with refresh; indefinite ASIN
+  storage is not permission to archive its prices. Normalized history is not an
+  established exception. This explicit use restriction decides the outcome.
+  [Associates policies](https://affiliate-program.amazon.com/help/operating/policies).
+
+### 5. Shopify Storefront API across merchant stores — BLOCKED
+
+- **Access/data:** Storefront supports tokenless and token-based access, subject
+  to permissions. Product/variant IDs, contextual price/currency, compare-at
+  price, and sale availability are documented. Technical public access does not
+  establish permission to harvest arbitrary shops.
+  [Storefront reference](https://shopify.dev/docs/api/storefront/2026-04),
+  [Product query](https://shopify.dev/docs/api/storefront/latest/queries/product),
+  [Product fields](https://shopify.dev/docs/api/storefront/latest/objects/Product).
+- **Limits:** buyer traffic has no fixed request-per-minute limit; automated
+  traffic is limited. Tokenless query complexity is capped at 1,000. Do not apply
+  the buyer exemption to this collector. Fixtures are straightforward once an
+  authorized store context exists.
+  [Storefront limits](https://shopify.dev/docs/api/storefront/2026-04#rate-limits).
+- **Retention/restrictions:** API terms section 2.3.14 restrict systematic
+  collection/product indexes; section 6 limits Merchant Data use to authorized
+  services and requires deletion within 30 days of specified triggers, including
+  uninstall or enforceable deletion requests. No normalized-history carve-out
+  was established. A merchant's technical token does not override platform terms.
+  [API license](https://www.shopify.com/legal/api-terms).
+- **Boundary:** this classification concerns the proposed cross-store tracker,
+  not a claim that every merchant-authorized internal analytics app is forbidden.
+
+### 6. One consenting WooCommerce merchant, Store API — NEEDS CLARIFICATION
+
+- **Access/data:** official public product endpoints expose published product
+  IDs, permalinks, price/regular/sale fields, currency/minor-unit information,
+  and stock indicators. Storefront reads do not require merchant API keys.
+  [Store API](https://developer.woocommerce.com/docs/apis/store-api/),
+  [Products](https://developer.woocommerce.com/docs/apis/store-api/resources-endpoints/products).
+- **Limits/testing:** the built-in optional limiter's documented 25 requests per
+  ten seconds applies to POST, not a blanket GET quota. A merchant/host can impose
+  additional controls. An owned test store permits repeatable fixtures, but is
+  not proof of access to a production merchant.
+  [Rate limiting](https://developer.woocommerce.com/docs/apis/store-api/rate-limiting).
+- **Retention/restrictions:** these technical docs do not grant a license to
+  every merchant's catalog. No concrete merchant or history agreement is in hand.
+  Raw caching and retained normalized observations both require that source's
+  policy to be settled. Open-source server software is not a catalog-data license.
+- **Next gate:** identify one merchant willing to authorize bounded reads and
+  indefinite price-history reuse, including after access ends. Define variants,
+  currency, tax context, and attribution. Until then this is an access route,
+  not a PROMISING licensed source or an approved retailer.
+
+### 7. Open Food Facts Open Prices — NEEDS CLARIFICATION
+
+- **Access/data:** public price reads and daily exports; authenticated operations
+  use an Open Food Facts account/Bearer token, with a pre-production environment.
+  Records associate product codes, location, price/currency, and observation
+  dates. No stock field or continuously refreshed offer guarantee was established.
+  [API guide](https://openfoodfacts.github.io/open-prices/guides/API/),
+  [Price query reference](https://openfoodfacts.github.io/documentation/docs/Open-prices/prices/prices_list/),
+  [Read access overview](https://openfoodfacts.github.io/documentation/docs/).
+- **Limits:** no numeric Open Prices read quota was found in those guides; do not
+  substitute the separate Product Opener API limits. Daily dumps reduce API load.
+- **Retention:** the project explicitly publishes data under ODbL and provides
+  reusable exports. Retained observations are compatible in principle with that
+  grant, subject to attribution/share-alike and database-combination obligations;
+  this is affirmative reuse evidence, not an inference from a missing cache TTL.
+  [Data and license](https://openfoodfacts.github.io/open-prices/guides/data/).
+- **Unresolved suitability:** receipt/shelf observations can be old and are not
+  retailer-current offers. A product/location pair is not necessarily a product
+  page Listing. Clarify freshness, source dates versus collection timestamps, and
+  the intended ODbL distribution of our combined database before selection.
+  Do not relabel a historical receipt as today's price.
+  [Source model](https://openfoodfacts.github.io/open-prices/topics/core/).
+
+### 8. France government fuel-price open data — PROMISING
+
+- **Access/data:** free public ZIP/XML downloads without developer approval.
+  Station ID plus fuel ID identifies a station/fuel record; price is explicitly
+  EUR with source-update time. The instantaneous feed includes outages and
+  closures. Names/brands of stations are excluded from the source feed, so do
+  not invent merchant names. No numeric request quota is published on this page.
+  [Official feed and field dictionary](https://www.prix-carburants.gouv.fr/rubrique/opendata/).
+- **Freshness/testing:** the source feed updates every ten minutes; the improved
+  government mirror harvests every fifteen minutes. Source price-update times
+  still matter. Prefer the original feed; published archives support fixtures.
+  [Government dataset metadata](https://www.data.gouv.fr/datasets/prix-des-carburants-en-france-flux-instantane-v2-amelioree).
+- **Retention:** the dataset identifies Open Licence 2.0. Its affirmative grant
+  covers copying, transformation/derived information, publication, and commercial
+  reuse for unlimited duration. Attribute source and update date; do not imply
+  endorsement or misrepresent data. Raw snapshots and normalized histories are
+  therefore compatible, not merely temporarily cacheable.
+  [Official license text](https://github.com/etalab/licence-ouverte/blob/master/LO.md).
+- **Model/practicality gate:** fuel is a unit-priced commodity, not a packaged
+  retail SKU. Validate exact decimal precision, unit basis, source detail URL,
+  station identity continuity, and outage-to-stock mapping before implementation.
+  Missing outage reports must not automatically establish in-stock status.
+  EUR is not yet supported by our domain code. This is a viable research target,
+  not a drop-in adapter or an approved change of product scope.
+
+### 9. Italy MIMIT fuel-price open data — PROMISING
+
+- **Access/data:** public daily station and price files, no developer approval.
+  They report prices effective at 08:00 on the previous day, not a live quote.
+  Since February 10, 2026 the delimiter is `|`, despite the CSV designation.
+  No numeric download quota is published on the dataset page.
+  [Official dataset](https://www.mimit.gov.it/it/open-data/elenco-dataset/carburanti-prezzi-praticati-e-anagrafica-degli-impianti).
+- **Identity/stock:** `idimpianto`, fuel description, and self-service/served flag
+  define the price context. Amounts are EUR to three decimal places per litre
+  (methane: kilogram), with a communication timestamp. Station metadata includes
+  operator and name. No stock field is documented; preserve unknown.
+  [Current field specification](https://www.mimit.gov.it/images/stories/documenti/Metadati_prezzi_carburanti_20260128.pdf).
+- **Retention:** MIMIT explicitly licenses the dataset under IODL 2.0. Official
+  government explanations of that license permit reproduction, extraction,
+  reuse, and derivative works with attribution and non-misrepresentation duties.
+  These are compatible with retained histories, not only temporary caching.
+  [Government IODL explanation](https://www.dati.lombardia.it/legale/normativa),
+  [Government reproduction of reuse conditions](https://porfesr.regione.campania.it/it/menu-servizio/privacy-e-note-legali/note-legali-qmbc?page=1).
+- **Practicality/restrictions:** simple files make fixtures practical; daily lag,
+  experimental publication status, and unit-price precision make it weaker than
+  France for current-price tracking. The full license link on MIMIT returned 403
+  in this research environment; the licensing assertion and official explanations
+  above were readable. Confirm the complete applicable text in focused review.
+  Treat records as dated reported prices, never assured live availability.
+
+### Ranking: PROMISING candidates only
+
+1. **France government fuel feed.** Best documented combination of independent
+   access, recent reported prices, stock-out evidence, source IDs, reusable
+   archives, and explicit unlimited-duration reuse. First choice for the next
+   feasibility task, provided fuel tracking is an acceptable initial context.
+2. **Italy MIMIT fuel files.** Accessible and reuse-compatible, with easy fixtures,
+   but slower snapshots and no documented stock state. Appropriate only if daily
+   reported-price history is useful; not a substitute for live retailer quotes.
+
+These ranks assess sources worth validating, not ready-to-implement adapters.
+No conventional retailer or marketplace in this sweep clears the historical-use
+gate. If the first provider must be a packaged-goods store, pursue the named
+WooCommerce-merchant permission gate instead; it remains unranked until granted.
+
+### Next feasibility task and model guardrails
+
+Validate the France feed narrowly: one station and one fuel grade, official
+source URL/identity, dated EUR offer price, supported outage facts, and attribution.
+Check a representative current record and archive, decimal scale, timezone,
+source update versus retrieval time, and a conservative download interval.
+
+The current Money type supports only USD/JPY integer minor units. Fuel unit
+prices may require sub-cent precision; Italy explicitly documents three decimals.
+Do not round away source evidence, redefine EUR's exponent, or turn a calculated
+ten-litre total into an observed offer. Determine whether a small separately
+reviewed unit-price representation is justified or whether this category should
+be rejected. No currency, domain, persistence, or provider changes are authorized
+by this research. A government feed is the Provider source, not the Retailer;
+the Retailer must retain the actual station/selling context.
+
+The narrower retention grant is not the only gate: Listing URL/context,
+observation-time precision, refresh behavior, and trustworthy price semantics
+must also fit [DOMAIN_MODEL.md](DOMAIN_MODEL.md). Missing fields stay missing;
+reference amounts are not MSRP; operational failures are not stock observations.
+The [architecture](ARCHITECTURE.md) and existing contract remain unchanged.
+
+### Verification boundary
+
+Important findings use current official documentation, dataset metadata, and
+licenses checked for this sweep. Earlier detailed decisions remain historical
+records. No private permissions are assumed. The old Etalab license landing URL
+redirected to the data portal; the official Etalab license repository supplies
+the text, and the government dataset explicitly identifies version 2.0. Italy's
+full-license retrieval limitation is recorded above. Numeric limits not found
+are left unknown. Source capability is distinguished from actual credential
+issuance, live response validation, and implementation approval.
