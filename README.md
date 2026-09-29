@@ -3,8 +3,8 @@
 A general-purpose tracker for retailer listing prices, price history, promotions,
 and alerts. This repository currently contains a Go backend with liveness and
 database readiness checks, local PostgreSQL, and a minimal Next.js home page.
-Catalog and immutable observation persistence are available; tracking features
-are planned.
+Catalog APIs, immutable observation persistence, an opt-in Fake collection runtime,
+and current-price APIs are available. No real retailer is collected yet.
 
 ## Repository layout
 
@@ -240,7 +240,7 @@ using the PowerShell or Bash commands in the Backend section (omit `go run .`).
 From `backend/`, run:
 
 ```sh
-go test -tags=integration -count=1 -v ./persistence
+go test -tags=integration -count=1 -v ./...
 ```
 
 The `integration` build tag explicitly enables these tests. They require a
@@ -264,7 +264,8 @@ Observation writes require a caller-supplied, globally unique collected-result I
 Reuse it for retries; allocate a new ID for each independent collection, even if
 prices are unchanged. A repeated ID returns a wrapped PostgreSQL uniqueness error
 (SQLSTATE `23505`); no observation is overwritten, including if the retry payload
-differs. The persistence API provides only insertion and history reads.
+differs. Observations support insertion, history, and current reads; no update or
+delete API exists.
 
 History reads return one listing's observations oldest first, breaking exact-time
 ties by result ID using bytewise `C` collation. Timestamps retain UTC instants and
@@ -273,6 +274,95 @@ preserves sub-microsecond nanoseconds. Prices use nullable integer minor units
 and one shared currency derived from present Money values. Stock-only rows have
 NULL currency; NULL prices remain distinct from explicit zero. General source
 and MSRP-specific evidence are stored separately.
+
+## Collection runtime and current prices
+
+Apply migrations first. The HTTP backend owns one collector instance. Only Listing
+IDs explicitly configured in `COLLECTOR_CONFIG` are active; absent configuration
+means no collection. Configuration is loaded once at startup, at most 100 Listings
+and 1 MiB of JSON. All referenced Listings must already exist through the catalog
+APIs. A missing Listing fails its attempt without stopping others.
+
+For a local Fake demonstration, start the backend normally, then create this
+catalog using PowerShell in another terminal (use new IDs if these already exist):
+
+```powershell
+$base = 'http://127.0.0.1:8080'
+Invoke-RestMethod "$base/products" -Method Post -ContentType application/json -Body '{"id":"demo-product","name":"Demo product"}'
+Invoke-RestMethod "$base/retailers" -Method Post -ContentType application/json -Body '{"id":"demo-retailer","name":"Fake retailer"}'
+Invoke-RestMethod "$base/listings" -Method Post -ContentType application/json -Body '{"id":"demo-listing","product_id":"demo-product","retailer_id":"demo-retailer","url":"https://example.com/demo"}'
+Invoke-RestMethod "$base/listings" -Method Post -ContentType application/json -Body '{"id":"demo-failing","product_id":"demo-product","retailer_id":"demo-retailer","url":"https://example.com/failing"}'
+```
+
+Stop the backend with Ctrl+C. In its terminal, with the same database environment
+loaded and working directory `backend/`, enable the example and restart:
+
+```powershell
+$env:COLLECTOR_CONFIG = 'collection.example.json'
+$env:COLLECTION_INTERVAL = '1m'
+$env:COLLECTION_TIMEOUT = '10s'
+$env:PRICE_MAX_AGE = '15m'
+go run .
+```
+
+Those durations are the defaults and must be positive Go duration strings. Bash
+can set the same variables with `export NAME=value`. The example uses Fake only:
+one success and one failure. Its fixed source timestamp is intentionally preserved
+on every cycle, so it can be stale; a successful collection does not make old
+source evidence fresh. Edit the fixture timestamp explicitly for a fresh demo.
+Amounts are integer minor units (USD cents, JPY yen); omit missing amounts and
+omit currency for stock-only fixtures. MSRP requires `msrp_source` evidence.
+Configuration errors fail startup; no network provider or credentials are used.
+
+The first cycle runs immediately. Each subsequent cycle starts one interval after
+the previous cycle completes. Existing batch ingestion processes Listings
+sequentially with per-Listing deadlines and failure isolation. Every independent
+collection gets a new result ID; there are no retries or overlapping cycles.
+Run only one backend collector process. Ctrl+C/SIGTERM cancels collection, drains
+HTTP requests, joins the collector, then closes the database.
+
+Collection status is **in memory** and resets at restart: `never_attempted`,
+`collecting`, `success`, or `failed` for active Listings; otherwise `inactive`.
+It includes last attempt and last successful persistence times when available.
+Failures use the safe code `collection_failed`, preserve the last success, and
+never create a PriceObservation. State is published after batch completion;
+collection timestamps describe runtime activity, not the source observation time.
+No schema change or durable collection-run history is introduced.
+
+Read the two JSON endpoints:
+
+```sh
+curl http://127.0.0.1:8080/listings/demo-listing/price
+curl http://127.0.0.1:8080/products/demo-product/prices
+```
+
+Both use the existing `data` / `error` envelopes. Missing Listing/Product returns
+404; an existing Listing without history returns 200 with `observation: null`.
+Each result contains Listing/retailer identity, exact URL, one complete observation,
+and collection status. Optional price amounts and currency are omitted when absent;
+explicit zero remains zero. Source, MSRP evidence, stock, and original observation
+timestamp are preserved. Freshness is `missing`, `fresh`, `stale`, or `future`,
+using `PRICE_MAX_AGE`; future timestamps are not considered fresh.
+
+Latest means greatest observed timestamp (including nanoseconds), breaking exact
+ties by greatest collected-result ID in bytewise `C` order. Insertion time does not
+win. A latest stock-only observation does not inherit any older prices.
+
+Product reads include all its Listings, even inactive ones, ordered by bytewise ID.
+The bound is 100; larger products return 422 `too_many_listings` rather than a
+misleading partial comparison. The query selects coherent rows in one SQL statement.
+An empty product returns an empty array and no best price.
+
+The deliberately conservative comparison uses **offer price, otherwise sale price**;
+MSRP and retailer list price are reference values, never fallbacks. `best_price`
+is present only when every Listing has a fresh, in-stock observation with that
+price basis and all currencies match. Otherwise it is null and `comparison_status`
+explains why (for example `missing_observation`, `not_fresh`, `not_in_stock`,
+`missing_price`, or `incompatible_currencies`). Equal amounts choose the smallest
+Listing ID. The best result identifies the retailer, Listing, currency, amount,
+and chosen basis. This compares observed item prices only: no shipping, tax,
+coupons, promotions, currency conversion, or EffectivePrice calculation. The
+example's failed Listing intentionally prevents a product-wide best-price claim.
 
 ## Frontend
 

@@ -1,0 +1,13 @@
+[
+  {
+    "listing_id": "demo-listing",
+    "observation": {
+      "observed_at": "2026-09-29T12:00:00Z",
+      "source": "fake:demo-fixture-v1",
+      "stock": "in_stock",
+      "currency": "USD",
+      "offer_price": 1999
+    }
+  },
+  {"listing_id": "demo-failing", "fail": true}
+]

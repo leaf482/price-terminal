@@ -2,9 +2,13 @@ package main
 
 import (
 	"context"
+	"errors"
 	"io"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/leaf482/price-terminal/backend/persistence"
@@ -29,7 +33,7 @@ func readinessHandler(ping func(context.Context) error) http.HandlerFunc {
 	}
 }
 
-func newHandler(ping func(context.Context) error, products productStore, catalog catalogStore) http.Handler {
+func newHandler(ping func(context.Context) error, products productStore, catalog catalogStore, prices ...currentAPI) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", healthHandler)
 	mux.HandleFunc("GET /readyz", readinessHandler(ping))
@@ -38,6 +42,9 @@ func newHandler(ping func(context.Context) error, products productStore, catalog
 	mux.HandleFunc("GET /products/{id}", api.get)
 	mux.HandleFunc("GET /products", api.list)
 	registerCatalogRoutes(mux, catalog)
+	if len(prices) > 0 {
+		registerCurrentRoutes(mux, prices[0])
+	}
 	return mux
 }
 
@@ -55,12 +62,50 @@ func run() error {
 	defer db.Close()
 
 	store := persistence.New(db)
+	interval, err := durationEnv("COLLECTION_INTERVAL", time.Minute)
+	if err != nil {
+		return err
+	}
+	timeout, err := durationEnv("COLLECTION_TIMEOUT", 10*time.Second)
+	if err != nil {
+		return err
+	}
+	maxAge, err := durationEnv("PRICE_MAX_AGE", 15*time.Minute)
+	if err != nil {
+		return err
+	}
+	runtime, err := loadCollector(os.Getenv("COLLECTOR_CONFIG"), store, interval, timeout)
+	if err != nil {
+		return err
+	}
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	collectorDone := make(chan error, 1)
+	go func() { collectorDone <- runtime.Run(ctx) }()
 	server := &http.Server{
 		Addr:              "127.0.0.1:8080",
-		Handler:           newHandler(db.PingContext, store, store),
+		Handler:           newHandler(db.PingContext, store, store, currentAPI{store: store, status: runtime.Status, maxAge: maxAge, now: time.Now}),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
 	log.Printf("listening on http://%s", server.Addr)
-	return server.ListenAndServe()
+	serverDone := make(chan error, 1)
+	go func() { serverDone <- server.ListenAndServe() }()
+	var serveErr error
+	select {
+	case <-ctx.Done():
+	case serveErr = <-serverDone:
+	}
+	stop()
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	shutdownErr := server.Shutdown(shutdownCtx)
+	if shutdownErr != nil {
+		_ = server.Close()
+	}
+	<-collectorDone // Join collection before the deferred database Close.
+	if serveErr != nil && !errors.Is(serveErr, http.ErrServerClosed) {
+		return serveErr
+	}
+	return shutdownErr
 }
