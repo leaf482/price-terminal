@@ -1,4 +1,4 @@
-// Package persistence stores catalog domain values using database/sql. The
+// Package persistence stores catalog and observation domain values using database/sql. The
 // caller owns the database pool and supplies request deadlines via context.
 package persistence
 

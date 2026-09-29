@@ -57,6 +57,16 @@ func freshDatabase(t *testing.T, ctx context.Context) *sql.DB {
 			t.Fatalf("goose %s: %v\n%s", action, err, output)
 		}
 		t.Logf("goose %s: %s", action, output)
+		if action == "down" {
+			var observationTableAbsent, catalogTablePresent bool
+			if err := db.QueryRowContext(ctx, `SELECT to_regclass('public.price_observations') IS NULL,
+				to_regclass('public.listings') IS NOT NULL`).Scan(&observationTableAbsent, &catalogTablePresent); err != nil {
+				t.Fatal(err)
+			}
+			if !observationTableAbsent || !catalogTablePresent {
+				t.Fatal("migration 3 rollback must remove observations and retain catalog")
+			}
+		}
 	}
 	return db
 }
@@ -83,7 +93,7 @@ func TestCatalogIntegration(t *testing.T) {
 		if err := rows.Err(); err != nil {
 			t.Fatal(err)
 		}
-		want := []string{"goose_db_version", "listings", "products", "retailers"}
+		want := []string{"goose_db_version", "listings", "price_observations", "products", "retailers"}
 		if !reflect.DeepEqual(tables, want) {
 			t.Fatalf("tables = %v, want %v", tables, want)
 		}
@@ -92,8 +102,8 @@ func TestCatalogIntegration(t *testing.T) {
 		if err := db.QueryRowContext(ctx, `SELECT version_id FROM goose_db_version WHERE is_applied ORDER BY id DESC LIMIT 1`).Scan(&version); err != nil {
 			t.Fatal(err)
 		}
-		if version != 2 {
-			t.Fatalf("version = %d, want 2", version)
+		if version != 3 {
+			t.Fatalf("version = %d, want 3", version)
 		}
 	})
 
