@@ -18,7 +18,27 @@ function HistoryResult({ id, range }: {
     range: string;
 }) {
     const [data, setData] = useState<History | null>(null), [error, setError] = useState(false);
-    useEffect(() => { const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), 10000); api(`/listings/${encodeURIComponent(id)}/history?range=${range}`, parseHistory, controller.signal).then(setData).catch(() => setError(true)).finally(() => clearTimeout(timer)); return () => { controller.abort(); clearTimeout(timer); }; }, [id, range]);
+    useEffect(() => {
+        let active = true;
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 10000);
+        api(`/listings/${encodeURIComponent(id)}/history?range=${range}`, parseHistory, controller.signal)
+            .then(history => {
+                if (!active) return;
+                setData(history);
+                setError(false);
+            })
+            .catch(() => {
+                // A timeout is still an error while this effect is active.
+                if (active) setError(true);
+            })
+            .finally(() => clearTimeout(timer));
+        return () => {
+            active = false;
+            controller.abort();
+            clearTimeout(timer);
+        };
+    }, [id, range]);
     if (error)
         return <p role="alert">History could not be loaded. Select another range or reload to retry.</p>;
     if (!data)
