@@ -1,6 +1,6 @@
 # Provider access feasibility
 
-Latest review: [candidate sweep, Task 17](#provider-candidate-sweep--task-17).
+Latest review: [France domain fit, Task 18](#france-fuel-feed-domain-fit--task-18).
 The earlier individual feasibility decisions are retained below for traceability.
 
 ## Best Buy access feasibility — Task 14
@@ -674,6 +674,10 @@ guarantees against future identifier changes.
 
 ### Ranking: PROMISING candidates only
 
+Historical Task 17 ranking: France's focused review below subsequently
+[rejected it as the first provider](#france-fuel-feed-domain-fit--task-18).
+The ranking is retained as research history, not current implementation approval.
+
 1. **France government fuel feed.** Best documented combination of independent
    access, recent reported prices, stock-out evidence, source IDs, reusable
    archives, and explicit unlimited-duration reuse. First choice for the next
@@ -719,3 +723,171 @@ the text, and the government dataset explicitly identifies version 2.0. Italy's
 full-license retrieval limitation is recorded above. Numeric limits not found
 are left unknown. Source capability is distinguished from actual credential
 issuance, live response validation, and implementation approval.
+
+## France fuel feed domain fit — Task 18
+
+Checked: 2026-09-29. Outcome: **REJECTED FOR THIS PROJECT as the first real
+provider**.
+
+This supersedes Task 17's provisional France recommendation. Its reuse license
+remains suitable, but exact unit pricing requires a broader price representation
+before ordinary retail integration. That is not justified merely to obtain a
+first provider. This rejects the current selection, not the possibility of a
+separately scoped commodity-price feature later. No domain change is approved.
+
+### Evidence checked
+
+- The [official feed dictionary](https://www.prix-carburants.gouv.fr/rubrique/opendata/)
+  defines station `pdv/@id`, fuel `prix/@id`, EUR `valeur`, and `maj` as the last
+  price update. It also describes address/coordinates, outages, closures, and
+  archives. Station names and brands are excluded from this feed.
+- The public [instantaneous ZIP/XML feed](https://donnees.roulez-eco.fr/opendata/instantane_ruptures)
+  was fetched and parsed in memory on the check date, without writing a fixture
+  or application code. One returned station was `89100001`; its Gazole record
+  contained the following attributes, copied as strings:
+
+  ```xml
+  <prix nom="Gazole" id="1" maj="2026-09-28 11:45:27" valeur="2.429" />
+  ```
+
+- An [official station detail page](https://www.prix-carburants.gouv.fr/station/34600001)
+  explicitly labels prices EUR per litre and displays three-decimal amounts for
+  several grades. It also shows that one station page contains multiple fuels.
+  This page was read for feasibility, not proposed as a scraping source.
+
+### Domain mapping: plausible relationships, incomplete price semantics
+
+**Product:** a precisely defined fuel grade, independent of station, could be a
+Product. The source's grade code is useful evidence, but a broad label such as
+Gazole is not proof that branded/additivated fuels are identical products. Any
+mapping would remain manual and narrowly defined; no matching by fuel label
+alone across all retailers. Product must not acquire a station or coordinates.
+
+**Retailer:** the individual station/store context is the natural initial
+Retailer, not the government publisher and not every station sharing a brand.
+The existing Retailer has ID and optional Name, so a source station ID can identify
+the context without inventing a name. Operator, brand, and location are different
+concepts; the feed does not establish a legal-operator identity. Its address and
+coordinates can help check continuity, but the current type has no location or
+operator-history fields. A geographic search feature is unnecessary for tracking
+one explicit station.
+
+**Listing:** `(station ID, fuel ID)` is a plausible source identity. One station
+would have separate Listings for separate grades, each linked to its Product and
+station Retailer. A station detail URL plus explicit fuel reference can select
+the grade on a multi-product page. Existing Listing fields and the catalog's
+`(retailer_id, url, retailer_product_id)` uniqueness constraint can express this;
+there is no need to invent one merchant per fuel or fabricate URL fragments.
+The source page is government-hosted rather than a merchant checkout, so this
+would need an explicit accepted source-context interpretation, not a claim that
+the government sells fuel.
+
+**PriceObservation:** an immutable snapshot of one station/grade's reported unit
+price and supported stock evidence is conceptually appropriate. It is an offer
+unit rate, not MSRP, retailer list price, sale price, or a purchased-volume total.
+An explicit active shortage can support out-of-stock for that grade; missing
+shortage evidence does not prove in-stock. Closure and permanent non-distribution
+must not be mistaken for a fresh zero price. The relationship model is therefore
+not the decisive problem: the current monetary fields cannot hold the rate exactly.
+
+These are proposed mappings, not newly accepted domain semantics. They were
+compared with [DOMAIN_MODEL.md](DOMAIN_MODEL.md),
+[catalog types](../backend/domain/catalog.go), and
+[observation types](../backend/domain/observation.go).
+
+### Money: exact incompatibility, even after hypothetical EUR support
+
+The observed `2.429` EUR/L requires thousandths of a euro per litre. Its exact
+representation is `2429 / 1000 EUR per litre`, or `242.9` euro cents per litre.
+No floating-point arithmetic is needed to establish this incompatibility.
+Euro cents are hundredths of a euro.
+[ECB currency explanation](https://www.ecb.europa.eu/pub/pdf/other/eurobren.pdf).
+
+[Money](../backend/domain/money.go) currently supports only USD and JPY and stores
+an `int64` number of currency minor units. EUR is rejected today. Adding EUR with
+its correct exponent of two would still not represent this price exactly.
+Three decimals were verified in actual source data; this review does not claim
+the field dictionary guarantees an exhaustive maximum precision for every archive.
+
+Rounding to cents loses an observed fact. Using an exponent of three for EUR
+misstates its currency scale. Multiplying by ten litres creates a derived total,
+not the source's observed one-litre rate. Hiding precision in Source or emitting
+stock-only observations would not satisfy the price-tracking goal.
+
+Supporting this category honestly would require a separately reviewed exact
+unit-price concept carrying currency, decimal/rational scale, and quantity unit,
+distinct from payable Money amounts, plus corresponding observation/storage/read
+semantics. That broader requirement is recorded only to explain the rejection;
+it is not a proposed implementation task or permission to alter Money.
+
+### Timestamps: update time is not a fresh collection time
+
+`prix/@maj` is a last-update timestamp, not the time our collector retrieved the
+file. In the live sample above it has seconds but neither an offset nor a `Z`.
+The feed dictionary documents the same offset-free format. Outage and closure
+events have their own start/end fields; their times need not match price updates.
+[Timestamp dictionary](https://www.prix-carburants.gouv.fr/rubrique/opendata/).
+
+The [government mirror metadata](https://www.data.economie.gouv.fr/explore/dataset/prix-des-carburants-en-france-flux-instantane-v2/?q=recordid%3Aecf07d8c81a8614a80b2ae14d447f3b6e2314f66)
+identifies `Europe/Paris`. This supports a local-time interpretation for that
+dataset, not an assertion that the original XML is UTC. The reviewed original
+dictionary does not specify a timezone or daylight-saving ambiguity policy;
+mirror metadata alone does not settle every original historical timestamp.
+
+**Safe direct mapping to ObservedAt: not established.** The constructor converts
+an already meaningful `time.Time` to UTC; it cannot recover a missing timezone
+or distinguish an ambiguous repeated local time. Do not append `Z` or silently
+use the backend machine's timezone. A source-update mapping would require a
+confirmed timezone and explicit handling of ambiguous/invalid local times.
+
+A retrieval timestamp could accurately describe observing a feed snapshot, but
+it is not a fresh retailer price update. Using it alone would conceal source age.
+The current observation has one ObservedAt and no typed source-update/event-time
+fields. Combining an old price with a newer shortage would need an explicit
+snapshot/provenance policy before presenting them as one coherent observation.
+No such policy or new fields are introduced here.
+
+### History: license fits; identity and refresh have limits
+
+The [government dataset](https://www.data.gouv.fr/datasets/prix-des-carburants-en-france-flux-instantane-v2-amelioree)
+identifies Open Licence 2.0. The [official license](https://github.com/etalab/licence-ouverte/blob/master/LO.md)
+permits copying, transformation, publication, and commercial reuse for unlimited
+duration, with attribution/source-update information and no misleading endorsement.
+Retaining raw snapshots and normalized history is compatible with those rights;
+there is no need to infer a normalized-data exception to a temporary cache limit.
+
+Documented station/fuel IDs provide a sensible continuity key for repeated
+records, but no reviewed official source promises permanent non-reuse or explains
+all operator changes/relocations. Historical station IDs must not be treated as
+guaranteed permanent legal-seller IDs. Current identity is usable for investigation;
+cross-year continuity was not validated in this task. Address/context changes
+would require review before joining histories automatically.
+
+The government metadata documents ten-minute source refresh and fifteen-minute
+mirror harvesting. This cadence permits repeated snapshots; it does not mean
+every station declares a new price at that cadence. The live sample included an
+E85 price last updated on August 25 alongside September updates. Later successful
+retrievals can confirm what the feed still reports, but must not refresh the
+underlying price's update time. Exact persistence retries would still use the
+existing ingestion identity; an unchanged source update is not a new price-change
+event. The published archives are useful history evidence, not proof of immutable
+records or station identity guarantees.
+
+### Decision and scope boundary
+
+Reject this first-provider choice because exact sub-cent unit rates require
+price-domain and downstream representation work unrelated to the planned first
+ordinary retail adapter. EUR alone is not the fix. Source-time semantics and
+station/product continuity add further validation work. The license and basic
+relationships are viable, but they do not outweigh this mismatch with the current
+project scope. This is **REJECTED**, rather than NEEDS DOMAIN CHANGE as a request
+to expand the project for fuel.
+
+The earlier sweep ranking remains a dated research result; it does not authorize
+France implementation. Do not automatically promote Italy: its documented
+three-decimal unit rates have the same precision concern. Resume investigation
+of a concrete ordinary-goods source with explicit retained-history permission,
+such as the still-unresolved consenting-merchant route. No replacement is approved.
+
+Only this decision document changes. The [architecture](ARCHITECTURE.md), Go
+types, EUR support, dependencies, interfaces, and roadmap remain unchanged.
