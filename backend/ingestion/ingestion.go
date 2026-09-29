@@ -1,0 +1,99 @@
+// Package ingestion collects and persists one listing at a time. Providers never
+// receive the store. Scheduling, automatic retries, and failure recording belong
+// outside this component; errors are returned without creating failure observations.
+package ingestion
+
+import (
+	"context"
+	"fmt"
+	"strings"
+
+	"github.com/leaf482/price-terminal/backend/domain"
+	"github.com/leaf482/price-terminal/backend/provider"
+)
+
+// Store is the existing persistence functionality needed for a single write.
+type Store interface {
+	GetListing(context.Context, string) (domain.Listing, error)
+	InsertPriceObservation(context.Context, string, domain.PriceObservation) error
+}
+
+type Ingestor struct {
+	provider provider.Provider
+	store    Store
+}
+
+func New(p provider.Provider, store Store) *Ingestor {
+	return &Ingestor{provider: p, store: store}
+}
+
+// Collected retains an immutable snapshot and its caller-supplied persistence ID.
+// Only a successful, validated collection creates this value. Its zero value is
+// invalid. Retain it if persistence fails; retry Persist, not Ingest.
+type Collected struct {
+	id          string
+	listing     domain.Listing
+	observation domain.PriceObservation
+}
+
+func (c Collected) ID() string                           { return c.id }
+func (c Collected) Observation() domain.PriceObservation { return c.observation }
+
+// Ingest calls the provider exactly once after input validation, then attempts
+// one atomic observation insert. resultID must be globally unique per independent
+// collection. Neither timestamps nor source facts are generated or refreshed here.
+// Collection/validation failures return a zero Collected; persistence failures
+// return the validated Collected plus the error, allowing an exact write retry.
+// Callers supply the context/deadline; no background work or retry loop is started.
+func (i *Ingestor) Ingest(ctx context.Context, resultID string, listing domain.Listing) (Collected, error) {
+	if err := ctx.Err(); err != nil {
+		return Collected{}, fmt.Errorf("ingest: %w", err)
+	}
+	if strings.TrimSpace(resultID) == "" {
+		return Collected{}, fmt.Errorf("ingest: result ID is required")
+	}
+	if err := listing.Validate(); err != nil {
+		return Collected{}, fmt.Errorf("ingest listing: %w", err)
+	}
+	observation, err := i.provider.Collect(ctx, listing)
+	if err != nil {
+		return Collected{}, fmt.Errorf("ingest collect: %w", err)
+	}
+	if err := provider.ValidateResult(listing, observation); err != nil {
+		return Collected{}, fmt.Errorf("ingest result: %w", err)
+	}
+	collected := Collected{id: resultID, listing: listing, observation: observation}
+	return collected, i.Persist(ctx, collected)
+}
+
+// Persist writes a previously validated collection without calling the provider.
+// A repeated ID remains a wrapped uniqueness error, including when a previous
+// write succeeded but its acknowledgement was lost. Never overwrite or silently
+// treat conflicting IDs as success. The original ID, facts, and time are reused.
+func (i *Ingestor) Persist(ctx context.Context, collected Collected) error {
+	if err := ctx.Err(); err != nil {
+		return fmt.Errorf("ingest persist: %w", err)
+	}
+	if strings.TrimSpace(collected.id) == "" {
+		return fmt.Errorf("ingest persist: result ID is required")
+	}
+	if err := provider.ValidateResult(collected.listing, collected.observation); err != nil {
+		return fmt.Errorf("ingest persist result: %w", err)
+	}
+	stored, err := i.store.GetListing(ctx, collected.listing.ID)
+	if err != nil {
+		return fmt.Errorf("ingest listing lookup: %w", err)
+	}
+	// Reject stale or fabricated source/relationship context instead of attaching
+	// facts collected for it to a different stored listing. No related rows are created.
+	if stored != collected.listing {
+		return fmt.Errorf("ingest persist: listing differs from stored source or relationships")
+	}
+	if err := ctx.Err(); err != nil {
+		return fmt.Errorf("ingest persist: %w", err)
+	}
+	if err := i.store.InsertPriceObservation(ctx, collected.id, collected.observation); err != nil {
+		return fmt.Errorf("ingest persist: %w", err)
+	}
+	return nil
+}
