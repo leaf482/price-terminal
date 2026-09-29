@@ -3,7 +3,8 @@
 A general-purpose tracker for retailer listing prices, price history, promotions,
 and alerts. This repository currently contains a Go backend with liveness and
 database readiness checks, local PostgreSQL, and a minimal Next.js home page.
-Tracking features are planned; no application schema or tables exist yet.
+Catalog domain types and PostgreSQL persistence are available; tracking features
+are planned.
 
 ## Repository layout
 
@@ -190,8 +191,9 @@ The initial file, `backend/migrations/00001_migration_bootstrap.sql`, contains
 `-- +goose Up` and `-- +goose Down` sections that each execute `SELECT 1;`.
 Its purpose is to prove the workflow. It creates no application objects.
 Goose owns `public.goose_db_version` and its supporting primary-key index and
-sequence. After `up`, version is 1; after `down`, version is 0 and the metadata
-table remains. Migration SQL and its version update run in one transaction by
+sequence. Migration 2 adds `products`, `retailers`, and `listings`; the latest
+version is 2. Rolling it back drops those catalog tables and returns to version 1.
+Migration SQL and its version update run in one transaction by
 default. Do not edit applied migration files; add a new numbered file instead.
 
 ### Fresh disposable database
@@ -212,7 +214,7 @@ goose -env .env -dir backend/migrations -timeout 30s postgres "dbname=price_term
 Only the target database name is overridden; host, port, user, password, and TLS
 still come from the existing configuration. Repeat the same disposable-target
 command with `up`, `down`, then `up` to check no-op, rollback, and reapply.
-Use these read-only checks to inspect metadata and confirm zero application tables:
+Use these read-only checks to inspect metadata and confirm three application tables:
 
 ```sh
 docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d price_terminal_migration_check -c "TABLE public.goose_db_version;"'
@@ -228,6 +230,34 @@ docker compose exec -T postgres sh -c 'dropdb --username "$POSTGRES_USER" price_
 
 Ordinary `go test ./...` in `backend/` does not run migrations and still works
 with PostgreSQL stopped. Migrations are never run automatically at HTTP startup.
+
+### Catalog persistence integration tests
+
+Install the pinned Goose CLI above and put it on `PATH`. Start PostgreSQL with
+`docker compose up -d --wait postgres`. Load the existing `.env` into the shell
+using the PowerShell or Bash commands in the Backend section (omit `go run .`).
+From `backend/`, run:
+
+```sh
+go test -tags=integration -count=1 -v ./persistence
+```
+
+The `integration` build tag explicitly enables these tests. They require a
+reachable PostgreSQL instance and a role with `CREATEDB` permission (provided by
+the local Compose setup); missing prerequisites fail the integration run.
+Each run creates a randomly named `price_terminal_test_*` database from
+`template0`, applies the real Goose migrations, checks repeat-up/rollback/reapply,
+and drops only that newly created database during cleanup. The regular
+`PGDATABASE` is used only for the administrative connection; its tables and data
+are not changed. An interrupted process may leave its disposable database behind.
+Ordinary `go test ./...` excludes these tests and needs neither PostgreSQL nor Goose.
+
+Listing uniqueness uses the exact `(retailer_id, url, retailer_product_id)` tuple.
+An absent retailer product ID is stored as an empty string, so repeated source
+identities without an ID are also rejected. Product ID is excluded to prevent
+attaching the same source identity to a second product. Different variant IDs on
+one URL remain distinct; URL aliases and identifiers across different URLs are
+not treated as matches. No URL normalization or automatic product matching occurs.
 
 ## Frontend
 
