@@ -1,5 +1,9 @@
 # First provider decision
 
+**Superseded implementation status:** the [Task 14 feasibility review](PROVIDER_RESEARCH.md)
+records Best Buy as **BLOCKED**. Its decision overrides the conditional adapter
+handoff below; do not begin implementation on the basis of this Task 13 document.
+
 Research date: 2026-09-28. Task 13 is documentation only. Read alongside
 [the roadmap](TASKS.md), [architecture](ARCHITECTURE.md), and
 [domain model](DOMAIN_MODEL.md).
