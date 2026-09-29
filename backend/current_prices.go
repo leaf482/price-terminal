@@ -48,6 +48,17 @@ func currentResponse(value persistence.CurrentListing, status collector.Status, 
 		return result
 	}
 	o := value.Observation
+	result.Observation = observationResponse(*o)
+	result.Freshness = "fresh"
+	if o.ObservedAt().After(now) {
+		result.Freshness = "future"
+	} else if now.Sub(o.ObservedAt()) > maxAge {
+		result.Freshness = "stale"
+	}
+	return result
+}
+
+func observationResponse(o domain.PriceObservation) *observationJSON {
 	data := &observationJSON{ObservedAt: o.ObservedAt(), Source: o.Source(), Stock: o.Stock(), MSRPSource: o.MSRPSource()}
 	data.Currency, _ = o.Currency()
 	amount := func(m domain.Money, ok bool) *int64 {
@@ -60,14 +71,7 @@ func currentResponse(value persistence.CurrentListing, status collector.Status, 
 	data.RetailerListPrice = amount(o.RetailerListPrice())
 	data.SalePrice = amount(o.SalePrice())
 	data.OfferPrice = amount(o.OfferPrice())
-	result.Observation = data
-	result.Freshness = "fresh"
-	if o.ObservedAt().After(now) {
-		result.Freshness = "future"
-	} else if now.Sub(o.ObservedAt()) > maxAge {
-		result.Freshness = "stale"
-	}
-	return result
+	return data
 }
 
 // Conservative product-wide comparison: every listing must have a fresh,

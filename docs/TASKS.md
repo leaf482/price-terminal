@@ -100,23 +100,15 @@ outcome implicitly authorizes implementation; see [PROVIDER_RESEARCH.md](PROVIDE
 
 Acceptance: run a bounded explicit set of active Listings on a configurable, non-overlapping schedule through existing batch ingestion; isolate failures and stop cleanly. Expose separate collection status and coherent latest observations through Listing/Product price endpoints, with deterministic ties, freshness, missing-price handling, and conservative same-currency comparisons. Fake is sufficient; no real provider, frontend, or promotions. Verify pure unit tests and disposable-database integration tests.
 
-### Task 20: Frontend catalog view
+### Task 20: Frontend MVP and price history
 
-Acceptance: display API-backed products and their listings with loading, empty, and error states. Keep layout minimal and verify navigation against representative data.
+Acceptance: display API-backed products, current Listing prices, stock, freshness, and source links with loading, empty, and error states. Add bounded historical reads for 1D/1W/1M/3M/1Y/ALL, deterministic ordering, conservative historical-low/change metadata, and a selectable history chart that preserves missing points and currency distinctions. Verify backend unit/integration tests and frontend parsing, formatting, lint, and build. No real provider or create/edit forms.
 
-### Task 21: Frontend current-price view
+### Tasks 21–23: Combined into Task 20
 
-Acceptance: show distinct observed prices, currency, source link, stock, and freshness on a listing view; avoid misleading zero/default prices. Verify unknown and stale states.
-
-## Historical prices
-
-### Task 22: Historical price API
-
-Acceptance: expose bounded listing observations with stable ordering and time-range handling; preserve semantic price fields, currency, and stock. Verify range boundaries and empty results.
-
-### Task 23: Historical price chart
-
-Acceptance: chart a clearly labeled price series using the history API; expose timestamps and currency, and show gaps/unknown states honestly. Verify one-point, empty, and interrupted histories.
+The user combined the planned frontend current-price view, historical API, and
+historical chart into Task 20. These IDs are retained as superseded references;
+subsequent task numbers and scope remain unchanged.
 
 ## Promotions, effective price, and MSRP
 

@@ -7,7 +7,26 @@ body {
 }
 
 main {
-  max-width: 48rem;
+  max-width: 72rem;
   margin: 4rem auto;
   padding: 0 1.5rem;
 }
+
+header { margin: 2rem 0; }
+h1 { font-size: clamp(2rem, 5vw, 3rem); line-height: 1.15; }
+h2,h3 { line-height: 1.3; }
+a { color: #1d4ed8; text-underline-offset: 3px; }
+.eyebrow { letter-spacing: .12em; font-size: .8rem; font-weight: bold; }
+.muted { color: #555; font-size: .9rem; overflow-wrap: anywhere; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,300px),1fr)); gap: 1rem; }
+.panel { background: white; border: 1px solid #ddd; border-radius: 12px; padding: 1.5rem; overflow-wrap: anywhere; }
+.price { font-size: 1.6rem; font-weight: bold; margin: .7rem 0; }
+.history { margin-top: 3rem; }
+.controls { display: flex; flex-wrap: wrap; gap: 1.5rem; margin-bottom: 1rem; align-items: center; }
+select,button { font: inherit; padding: .5rem; border: 1px solid #aaa; border-radius: 5px; background: white; color: #171717; }
+button { cursor: pointer; }
+figure { margin: 1rem 0; }
+svg { width: 100%; height: auto; overflow: visible; }
+svg text { font-size: 11px; }
+.axis { display: flex; justify-content: space-between; gap: 1rem; font-size: .75rem; overflow-wrap: anywhere; }
+details ol { max-height: 22rem; overflow: auto; padding-left: 1.5rem; }

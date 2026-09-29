@@ -368,6 +368,46 @@ example's failed Listing intentionally prevents a product-wide best-price claim.
 
 ## Frontend
 
+The catalog at `/` displays up to 20 products by ID and their current comparable
+prices. Product detail pages show Listings, source links, stock, freshness, and
+selectable history. Existing catalog APIs supply the data; no create/edit UI is
+included. Keep the Go backend running with migrations applied.
+
+Set `BACKEND_URL` in the frontend process environment to override
+`http://127.0.0.1:8080` (no trailing slash). Restart/rebuild Next.js after changing
+it. Server-rendered pages fetch the backend directly; browser history requests
+use Next.js `/api` forwarding, so no backend CORS changes are needed.
+
+`GET /listings/{id}/history?range=1M` defaults to `1M`. Supported ranges are `1D`,
+`1W`, `1M`, `3M`, `1Y`, and `ALL`: rolling 1/7/30/90/365 days ending at request
+time, not calendar months/years. Bounds are inclusive, with nanosecond precision;
+future observations are excluded. The newest 1,000 matching observations are
+returned chronologically, breaking timestamp ties by bytewise result ID. A
+`truncated` flag signals older omitted rows; use a narrower range. No schema change,
+aggregation, downsampling, or interpolation is performed.
+
+Historical metadata uses offer price, otherwise sale price, including explicit zero.
+The low covers priced observations in the selected interval, regardless of historical
+stock. Change uses the first and last actual observations, not the nearest available
+prices or interpolated range endpoints. It requires two distinct timestamps, priced
+endpoints, a nonzero starting amount, and one comparable currency throughout the
+priced history. Change is an exact rational percentage rounded to two decimals
+(half away from zero), returned as a string. Mixed currencies or a truncated window
+suppress both summaries; missing endpoints suppress change but can still allow a low.
+These historical statistics do not claim present availability or an effective price.
+
+The SVG history chart groups currencies separately. Only adjacent priced observations
+with the same price basis and at most a 15-minute gap are connected as visual guides.
+Missing prices and longer gaps break lines. No synthetic observations are added;
+individual marks and the expandable observation list preserve actual evidence.
+Money formatting uses integer/BigInt arithmetic for USD and JPY. API amounts outside
+JavaScript's exact safe-integer range are rejected visibly rather than rounded.
+No chart, state-management, or UI dependency was added.
+
+With Node.js 24, run frontend parser/formatting/history tests using `npm test` from
+`frontend/`. Loading, empty, and retryable error states are provided by the pages
+and history view.
+
 From the repository root, install the locked dependencies and start development:
 
 ```sh
