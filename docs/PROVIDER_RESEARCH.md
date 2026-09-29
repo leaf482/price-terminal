@@ -1,7 +1,7 @@
 # Provider access feasibility
 
-Latest review: [Dell, Task 15](#dell-access-feasibility--task-15).
-The earlier Best Buy decision is retained below for traceability.
+Latest review: [eBay, Task 16](#ebay-access-feasibility--task-16).
+The earlier Best Buy and Dell decisions are retained below for traceability.
 
 ## Best Buy access feasibility — Task 14
 
@@ -285,3 +285,167 @@ retrieval limitations are recorded rather than hidden. No credentials or live
 data were obtained. The decision does not depend on assuming missing fields or
 denied credential issuance. Best Buy's earlier outcome remains unchanged.
 Architecture, provider interfaces, domain code, and roadmap numbering are unchanged.
+
+## eBay access feasibility — Task 16
+
+Checked: 2026-09-28. Outcome: **BLOCKED under the published API license for
+permanent historical observations**.
+
+This resolves the preceding recommendation to investigate eBay. The requested
+feasibility gate takes precedence over collection scheduling listed as Task 16
+in [TASKS.md](TASKS.md); roadmap numbering is unchanged. No real provider is
+approved. This is a project suitability decision under default terms, not a
+claim that eBay has rejected an application or prohibits every historical use.
+
+### Access: an application route, not guaranteed production approval
+
+A Developers Program account and application keyset are required. Sandbox and
+production have separate keys; a keyset includes App ID (Client ID), Dev ID,
+and Cert ID (Client Secret). Creating production keys does not itself establish
+permission for the proposed application.
+[Getting started and application keys](https://developer.ebay.com/develop/guides/sell/get-started-with-ebay-apis).
+
+The published Buy API production process includes eBay/developer accounts,
+eBay Partner Network application and business-model assessment, approval,
+a developer-support production-access request, application review, and applicable
+agreements. Sandbox experimentation is available to developers; some checkout
+methods require additional approval. Do not confuse sandbox access or
+checkout-specific requirements with approval of a Browse price-history app.
+[Buy API requirements](https://developer.ebay.com/api-docs/buy/buy-requirements.html).
+
+**Independent developer feasibility:** there is a documented application route,
+but this project's business model, production entitlement, and new credential
+issuance remain unverified. No account was registered, approval requested, or
+authenticated request executed. Public documentation is not proof of acceptance.
+
+Browse uses an OAuth Application access token obtained with client credentials,
+then `Authorization: Bearer`. Public listing reads do not require a shopper's
+delegated sign-in. The token endpoint is
+`POST https://api.ebay.com/identity/v1/oauth2/token`; the basic scope is
+`https://api.ebay.com/oauth/api_scope`. Credentials must remain server-side.
+[Browse overview](https://developer.ebay.com/develop/api/buy/browse_api),
+[OAuth authorization](https://developer.ebay.com/develop/guides/sell/authorization).
+
+Production-key activation also requires marketplace-account-deletion notification
+compliance or an applicable exemption. The documented no-data-persistence opt-out
+does not fit this tracker. Seller-linked data would need appropriate deletion
+handling; do not assume price-only storage removes every obligation.
+[Account-deletion requirements](https://developer.ebay.com/develop/guides/sell/marketplace-user-account-deletion).
+
+### Relevant API and documented data
+
+Browse is the smallest relevant API: search discovers public listings, while
+`getItem` retrieves one exact listing's price and availability. A separate bulk
+feed or catalog integration is unnecessary for this task's proposed scope.
+[Browse API guide](https://developer.ebay.com/api-docs/buy/api-browse.html).
+
+Production routes, documented but not executed:
+
+```text
+GET https://api.ebay.com/buy/browse/v1/item/{item_id}
+GET https://api.ebay.com/buy/browse/v1/item/get_item_by_legacy_id?legacy_item_id={id}
+GET https://api.ebay.com/buy/browse/v1/item_summary/search?q={query}
+```
+
+The current [Browse OpenAPI specification, v1.20.4](https://developer.ebay.com/develop/api/spec/browse_api.json)
+documents these response capabilities:
+
+- `itemId`: listing/variation identity, distinct from a catalog Product;
+  `itemWebUrl`: listing URL. Preserve the complete REST item ID.
+- `price.value` and `price.currency`: item price and currency.
+- `marketingPrice.originalPrice`: pre-discount reference amount;
+  `priceTreatment` supplies presentation context. This is not automatically MSRP.
+- `estimatedAvailabilities`: availability status and estimated quantity where
+  supplied; quantity may be thresholded, not exact inventory.
+- `seller.userId`/`seller.username`, `listingMarketplaceId`: seller and market
+  context. Username availability is restricted in some contexts; do not rely on
+  a display name as permanent seller identity.
+- `buyingOptions`, condition fields, and shipping options support scope checks.
+- Discount amounts/percentages and `availableCoupons` can carry promotion data;
+  presence is conditional, not a universal offer or eligibility guarantee.
+
+The guide recommends checking `itemEndDate` together with availability; an ended
+listing can still be returned. Its `COMPACT` response supports refreshing price
+and availability, not permission to archive them indefinitely.
+[Availability and refresh guidance](https://developer.ebay.com/api-docs/buy/api-browse.html).
+
+### Quotas and historical retention
+
+Published default Browse limits are **5,000 calls/day for methods other than
+`getItems`**, with a separate 5,000/day limit for `getItems`. Higher limits require
+an Application Growth Check. Buy APIs require an additional license. Actual
+assigned quotas and burst limits were not verified without an account.
+[Official API call limits](https://developer.ebay.com/develop/get-started/api-call-limits).
+
+The currently served [API License Agreement](https://developer.ebay.com/join/api-license-agreement)
+is dated September 3, 2025. The relevant distinctions are:
+
+- **Raw responses:** the eBay Content definition covers retrieved data, not just
+  complete documents. Section 3.1 permits necessary intermediate copies for
+  authorized activity, with deletion when unnecessary.
+- **Caching/display:** section 8.1(b) requires removing content no longer publicly
+  available. Section 8.1(c) limits displayed listing-information age to six hours
+  (other content: 24 hours). This is a display-freshness rule, not a blanket
+  six-hour storage allowance.
+- **Normalized history:** no explicit historical-observation exemption was found.
+  Section 16.3 requires destruction of copies or material containing eBay Content
+  within ten days after termination. Section 8.1(d) separately restricts certain
+  derived analytics without written permission; it does not expressly resolve
+  this exact per-listing chart use case.
+
+**Project determination:** converting API prices to minor units and adding a
+timestamp does not establish independent data rights. Permanent retention
+conflicts with default deletion obligations. Whether timestamped charts satisfy
+display/analytics rules also needs clarification; no permission is inferred.
+
+### Product-model fit: hypothetical scope only
+
+If separately authorized, the following deliberately narrow scope would be
+technically plausible; it is **not implementation approval**:
+
+- Track one manually selected eBay Listing by complete item/variation ID, on
+  one explicit marketplace, with verified seller and new-condition context.
+  Require fixed-price eligibility and reject any auction buying option, including
+  auctions that also offer Buy It Now. Exclude used/refurbished items.
+- Map the item amount to OfferPrice with its returned currency. Leave MSRP,
+  retailer list price, and sale price absent until their exact semantics are
+  explicitly established; a reference price is not manufacturer evidence.
+- Map supported availability to stock state; absent or insufficient evidence
+  stays unknown. Request/access failures remain errors, not stock-only success.
+- Exclude shipping, taxes, coupons, negotiated offers, and member discounts from
+  the observed item price. No EffectivePrice, promotion evaluation, bidding,
+  checkout, or cross-seller best-price aggregation.
+- Keep Product retailer-independent and Listing specific to the source item.
+  Multiple sellers can therefore correspond to multiple Listings for one
+  manually identified Product, without automatic matching.
+
+The current catalog types defer marketplace/seller modeling and do not store
+first-class condition or marketplace fields. Before any eventual adapter,
+review how the restricted seller/marketplace/variation context will be verified
+and preserved; do not silently conflate eBay with the selling merchant. This is
+a documented modeling boundary, not an interface change. The existing Provider
+contract can return normalized PriceObservations without database access;
+historical-use authorization remains the prerequisite.
+
+### Next action and verification boundary
+
+Keep eBay implementation on hold. Reopening requires production approval for
+this business model and applicable written authorization answering:
+
+1. May this application retain and display indefinitely timestamped item-level
+   price/stock observations, including after listings cease to be public and
+   after API agreement termination? Which terms override the deletion rules?
+2. How do freshness and derived-analytics restrictions apply to explicitly dated
+   historical charts? What refresh, attribution, separation from other sources,
+   and seller-account-deletion duties remain?
+
+No support request was sent. **Next investigation direction:** a cooperating
+merchant's official API/feed with explicit contractual permission for historical
+retention and charts. Establish those rights before researching adapter details;
+no replacement provider is selected or approved here.
+
+Official sources were checked on the date above, including the current machine-
+readable Browse schema. Documented capabilities are not live-data verification.
+The decision does not depend on assuming credentials are unavailable. Prior
+Best Buy/Dell outcomes, [domain semantics](DOMAIN_MODEL.md),
+[architecture](ARCHITECTURE.md), and provider interfaces remain unchanged.
