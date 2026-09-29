@@ -29,7 +29,7 @@ func readinessHandler(ping func(context.Context) error) http.HandlerFunc {
 	}
 }
 
-func newHandler(ping func(context.Context) error, products productStore) http.Handler {
+func newHandler(ping func(context.Context) error, products productStore, catalog catalogStore) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", healthHandler)
 	mux.HandleFunc("GET /readyz", readinessHandler(ping))
@@ -37,6 +37,7 @@ func newHandler(ping func(context.Context) error, products productStore) http.Ha
 	mux.HandleFunc("POST /products", api.create)
 	mux.HandleFunc("GET /products/{id}", api.get)
 	mux.HandleFunc("GET /products", api.list)
+	registerCatalogRoutes(mux, catalog)
 	return mux
 }
 
@@ -53,9 +54,10 @@ func run() error {
 	}
 	defer db.Close()
 
+	store := persistence.New(db)
 	server := &http.Server{
 		Addr:              "127.0.0.1:8080",
-		Handler:           newHandler(db.PingContext, persistence.New(db)),
+		Handler:           newHandler(db.PingContext, store, store),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 

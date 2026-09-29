@@ -32,7 +32,7 @@ func (s productStub) ListProducts(c context.Context, n int) ([]domain.Product, e
 func productRequest(t *testing.T, s productStub, method, path, body string, status int) map[string]json.RawMessage {
 	t.Helper()
 	w := httptest.NewRecorder()
-	newHandler(func(context.Context) error { return nil }, s).ServeHTTP(w, httptest.NewRequest(method, path, strings.NewReader(body)))
+	newHandler(func(context.Context) error { return nil }, s, nil).ServeHTTP(w, httptest.NewRequest(method, path, strings.NewReader(body)))
 	if w.Code != status {
 		t.Fatalf("status = %d, want %d; body=%s", w.Code, status, w.Body.String())
 	}
@@ -171,7 +171,7 @@ func TestProductCancellation(t *testing.T) {
 		return domain.Product{}, ctx.Err()
 	}}
 	w := httptest.NewRecorder()
-	newHandler(nil, s).ServeHTTP(w, httptest.NewRequest("GET", "/products/p", nil).WithContext(ctx))
+	newHandler(nil, s, nil).ServeHTTP(w, httptest.NewRequest("GET", "/products/p", nil).WithContext(ctx))
 	if w.Code != 500 {
 		t.Fatalf("status=%d", w.Code)
 	}
