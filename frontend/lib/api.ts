@@ -24,6 +24,7 @@ export type Current = {
         retailer_id: string;
         url: string;
         retailer_product_id?: string;
+		tracking_enabled?: boolean;
     };
     observation: Observation | null;
     freshness: string;
@@ -108,6 +109,7 @@ export function parsePrices(x: unknown): Prices {
             text(l[k]);
         if (l.retailer_product_id !== undefined)
             text(l.retailer_product_id);
+		if (l.tracking_enabled !== undefined && typeof l.tracking_enabled !== 'boolean') throw new Error('Invalid tracking state');
         text(row.freshness);
         text(object(row.collection).state);
         const status=object(row.collection);

@@ -90,8 +90,10 @@ func TestCollectionFailureAndInvalidResultDoNotPersist(t *testing.T) {
 		{"invalid ID", nil, listing(), " ", nil},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			// Nil dependencies fail the test if invalid input reaches persistence.
-			got, err := ingestion.New(test.p, nil).Ingest(context.Background(), test.id, test.request)
+			// Tracking is checked before collection; a nil insert still fails if
+			// invalid results reach a write.
+			store := storeStub{get: func(context.Context, string) (domain.Listing, error) { return test.request, nil }}
+			got, err := ingestion.New(test.p, store).Ingest(context.Background(), test.id, test.request)
 			if err == nil || got.ID() != "" {
 				t.Fatalf("accepted failure: %+v %v", got, err)
 			}
@@ -181,7 +183,8 @@ func TestCancellation(t *testing.T) {
 		cancelDuring()
 		return want, nil
 	})
-	got, err := ingestion.New(p, nil).Ingest(ctx, "result", listing())
+	readOnly := storeStub{get: func(context.Context, string) (domain.Listing, error) { return listing(), nil }}
+	got, err := ingestion.New(p, readOnly).Ingest(ctx, "result", listing())
 	if !errors.Is(err, context.Canceled) {
 		t.Fatal(err)
 	}

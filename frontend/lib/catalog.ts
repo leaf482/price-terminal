@@ -8,6 +8,7 @@ export type Listing = {
     retailer_id: string;
     url: string;
     retailer_product_id?: string;
+	tracking_enabled?: boolean;
 };
 function records(value: unknown, fields: string[]): Record<string, unknown>[] {
     if (!Array.isArray(value))
@@ -39,6 +40,7 @@ export async function postCatalog(path: string, body?: Record<string, string>): 
         return;
     const payload = await response.json().catch(() => null);
     const code = payload?.error?.code;
+	if (code === 'tracking_disabled') throw new Error('Tracking is disabled for this Listing.');
     if (code === 'collection_busy')
         throw new Error('Collection is already running. Wait, then reload status.');
     if (code === 'collection_unavailable')

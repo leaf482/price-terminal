@@ -141,7 +141,7 @@ func (s *Store) EvaluateAlerts(ctx context.Context, resultID string) error {
 	if invalid {
 		return nil
 	}
-	current, err := scanCurrent(tx.QueryRowContext(ctx, `SELECT l.id,l.product_id,l.retailer_id,l.url,l.retailer_product_id,o.observed_at,o.observed_at_ns_remainder,o.source,o.stock,o.currency,o.msrp,o.retailer_list_price,o.sale_price,o.offer_price,o.msrp_source FROM price_observations o JOIN listings l ON l.id=o.listing_id WHERE o.result_id=$1`, resultID))
+	current, err := scanCurrent(tx.QueryRowContext(ctx, `SELECT l.id,l.product_id,l.retailer_id,l.url,l.retailer_product_id,NOT l.tracking_enabled,o.observed_at,o.observed_at_ns_remainder,o.source,o.stock,o.currency,o.msrp,o.retailer_list_price,o.sale_price,o.offer_price,o.msrp_source FROM price_observations o JOIN listings l ON l.id=o.listing_id WHERE o.result_id=$1`, resultID))
 	if err != nil {
 		return err
 	}

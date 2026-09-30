@@ -41,6 +41,7 @@ func summarizeProduct(p domain.Product, values []persistence.CurrentListing, sta
 	for _, v := range values {
 		state := status(v.Listing.ID)
 		item := currentResponse(v, state, now, maxAge)
+		state = item.Collection
 		items = append(items, item)
 		out.Freshness[item.Freshness]++
 		out.Collection[state.State]++

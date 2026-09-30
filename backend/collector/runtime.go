@@ -12,6 +12,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/leaf482/price-terminal/backend/domain"
 	"github.com/leaf482/price-terminal/backend/ingestion"
 	"github.com/leaf482/price-terminal/backend/provider"
 )
@@ -118,16 +119,22 @@ func (r *Runtime) Collect(ctx context.Context, id string) (err error) {
 	if err = ctx.Err(); err != nil {
 		return err
 	}
-	if !r.start(id) {
-		return ErrBusy
-	}
-	defer func() { r.finish(id, err) }()
 	ctx, cancel := context.WithTimeout(ctx, r.timeout)
 	defer cancel()
 	listing, err := r.store.GetListing(ctx, id)
 	if err != nil {
+		if r.start(id) {
+			r.finish(id, err)
+		}
 		return err
 	}
+	if listing.TrackingDisabled {
+		return domain.ErrTrackingDisabled
+	}
+	if !r.start(id) {
+		return ErrBusy
+	}
+	defer func() { r.finish(id, err) }()
 	_, err = ingestion.New(selected.Provider, r.store).Ingest(ctx, rand.Text(), listing)
 	return err
 }
@@ -135,7 +142,10 @@ func (r *Runtime) finish(id string, err error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	s := r.states[id]
-	if err != nil {
+	if errors.Is(err, domain.ErrTrackingDisabled) {
+		s.State = "disabled"
+		s.Error = ""
+	} else if err != nil {
 		s.State = "failed"
 		s.Error = "collection_failed"
 		s.ConsecutiveFailures++
@@ -180,14 +190,19 @@ func (r *Runtime) cycle(ctx context.Context) {
 			break
 		}
 		// Source resolution is part of this attempt; missing listings remain errors.
-		if !r.start(target.ListingID) {
-			continue
-		}
 		lookupCtx, cancel := context.WithTimeout(ctx, r.timeout)
 		listing, err := r.store.GetListing(lookupCtx, target.ListingID)
 		cancel()
 		if err != nil {
-			r.finish(target.ListingID, err)
+			if r.start(target.ListingID) {
+				r.finish(target.ListingID, err)
+			}
+			continue
+		}
+		if listing.TrackingDisabled {
+			continue
+		}
+		if !r.start(target.ListingID) {
 			continue
 		}
 		jobs = append(jobs, ingestion.Job{

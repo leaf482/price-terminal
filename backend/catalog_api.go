@@ -39,10 +39,11 @@ type listingJSON struct {
 	RetailerID        string `json:"retailer_id"`
 	URL               string `json:"url"`
 	RetailerProductID string `json:"retailer_product_id"`
+	TrackingEnabled   bool   `json:"tracking_enabled"`
 }
 
 func listingResponse(l domain.Listing) listingJSON {
-	return listingJSON{ID: l.ID, ProductID: l.ProductID, RetailerID: l.RetailerID, URL: l.URL, RetailerProductID: l.RetailerProductID}
+	return listingJSON{ID: l.ID, ProductID: l.ProductID, RetailerID: l.RetailerID, URL: l.URL, RetailerProductID: l.RetailerProductID, TrackingEnabled: l.TrackingEnabled()}
 }
 
 func registerCatalogRoutes(mux *http.ServeMux, store catalogStore) {
@@ -147,12 +148,22 @@ func (api catalogAPI) listRetailers(w http.ResponseWriter, r *http.Request) {
 }
 
 func (api catalogAPI) createListing(w http.ResponseWriter, r *http.Request) {
-	var body *listingJSON
+	var body *struct {
+		ID                string `json:"id"`
+		ProductID         string `json:"product_id"`
+		RetailerID        string `json:"retailer_id"`
+		URL               string `json:"url"`
+		RetailerProductID string `json:"retailer_product_id"`
+		TrackingEnabled   *bool  `json:"tracking_enabled"`
+	}
 	if err := decodeCatalogBody(w, r, &body); err != nil || body == nil {
 		productError(w, 400, "invalid_request", "expected a listing JSON object")
 		return
 	}
 	listing := domain.Listing{ID: body.ID, ProductID: body.ProductID, RetailerID: body.RetailerID, URL: body.URL, RetailerProductID: body.RetailerProductID}
+	if body.TrackingEnabled != nil {
+		listing.TrackingDisabled = !*body.TrackingEnabled
+	}
 	if err := listing.Validate(); err != nil {
 		productError(w, 400, "invalid_listing", err.Error())
 		return

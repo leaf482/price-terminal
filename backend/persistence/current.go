@@ -22,7 +22,7 @@ type CurrentListing struct {
 
 // One statement selects whole rows, including stock-only observations. Reverse
 // history order retains nanoseconds and breaks exact ties by greatest bytewise ID.
-const currentSelect = `SELECT l.id,l.product_id,l.retailer_id,l.url,l.retailer_product_id,
+const currentSelect = `SELECT l.id,l.product_id,l.retailer_id,l.url,l.retailer_product_id,NOT l.tracking_enabled,
  o.observed_at,o.observed_at_ns_remainder,o.source,o.stock,o.currency,
  o.msrp,o.retailer_list_price,o.sale_price,o.offer_price,o.msrp_source
  FROM listings l LEFT JOIN LATERAL (
@@ -77,7 +77,7 @@ func scanCurrent(row interface{ Scan(...any) error }) (CurrentListing, error) {
 	var remainder sql.NullInt64
 	var source, stock, currency, msrpSource sql.NullString
 	var amounts [4]sql.NullInt64
-	if err := row.Scan(&l.ID, &l.ProductID, &l.RetailerID, &l.URL, &l.RetailerProductID,
+	if err := row.Scan(&l.ID, &l.ProductID, &l.RetailerID, &l.URL, &l.RetailerProductID, &l.TrackingDisabled,
 		&observed, &remainder, &source, &stock, &currency, &amounts[0], &amounts[1], &amounts[2], &amounts[3], &msrpSource); err != nil {
 		return result, err
 	}

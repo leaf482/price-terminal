@@ -130,9 +130,9 @@ Acceptance: record manual observations through the domain constructor and shared
 
 Acceptance: show bounded Product summaries with Listing counts, comparable observed prices, valid observation times, separate process-local collection status, and alert events triggered in the last seven days. Reuse current-price rules through one summary endpoint; client-side name/brand/model search and price/error/alert filters apply to the first 20 products. Missing/stale/mixed-currency values never become a fabricated best price. The former selected-scenario API and explanation task was covered by Task 21.
 
-### Task 28: Covered by Task 21
+### Task 28: Listing tracking state
 
-The separate promotion and derived-result display is included in Task 21. Provider promotion collection remains deferred; subsequent scope is unchanged.
+Acceptance: existing Listings default to tracking enabled; toggle tracking through a small API/UI without removing metadata or historical evidence. Disabled Listings skip provider collection and reject manual refresh, including a persistence guard for in-flight collection; explicit manual observations remain allowed. Re-enabling resumes configured collection. Display tracking independently of observation freshness and collection failures. The former promotion/derived display task was covered by Task 21; provider promotion collection remains deferred.
 
 ### Task 29: MSRP provenance and comparisons
 

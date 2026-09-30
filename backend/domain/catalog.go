@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"errors"
 	"fmt"
 	"net/url"
 	"strings"
@@ -39,7 +40,13 @@ type Listing struct {
 	RetailerID        string
 	URL               string
 	RetailerProductID string
+	// Negative storage makes existing Go callers default to enabled as well.
+	TrackingDisabled bool
 }
+
+func (l Listing) TrackingEnabled() bool { return !l.TrackingDisabled }
+
+var ErrTrackingDisabled = errors.New("listing tracking is disabled")
 
 func (l Listing) Validate() error {
 	for _, field := range []struct{ name, value string }{

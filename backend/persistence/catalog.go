@@ -102,8 +102,8 @@ func (s *Store) InsertListing(ctx context.Context, listing domain.Listing) error
 	if err := listing.Validate(); err != nil {
 		return fmt.Errorf("insert listing: %w", err)
 	}
-	_, err := s.db.ExecContext(ctx, `INSERT INTO listings (id, product_id, retailer_id, url, retailer_product_id)
-		VALUES ($1, $2, $3, $4, $5)`, listing.ID, listing.ProductID, listing.RetailerID, listing.URL, listing.RetailerProductID)
+	_, err := s.db.ExecContext(ctx, `INSERT INTO listings (id, product_id, retailer_id, url, retailer_product_id, tracking_enabled)
+		VALUES ($1, $2, $3, $4, $5, $6)`, listing.ID, listing.ProductID, listing.RetailerID, listing.URL, listing.RetailerProductID, listing.TrackingEnabled())
 	if err != nil {
 		return fmt.Errorf("insert listing: %w", err)
 	}
@@ -112,8 +112,8 @@ func (s *Store) InsertListing(ctx context.Context, listing domain.Listing) error
 
 func (s *Store) GetListing(ctx context.Context, id string) (domain.Listing, error) {
 	var listing domain.Listing
-	err := s.db.QueryRowContext(ctx, `SELECT id, product_id, retailer_id, url, retailer_product_id FROM listings WHERE id = $1`, id).
-		Scan(&listing.ID, &listing.ProductID, &listing.RetailerID, &listing.URL, &listing.RetailerProductID)
+	err := s.db.QueryRowContext(ctx, `SELECT id, product_id, retailer_id, url, retailer_product_id, NOT tracking_enabled FROM listings WHERE id = $1`, id).
+		Scan(&listing.ID, &listing.ProductID, &listing.RetailerID, &listing.URL, &listing.RetailerProductID, &listing.TrackingDisabled)
 	if err != nil {
 		return domain.Listing{}, fmt.Errorf("get listing: %w", err)
 	}
@@ -121,4 +121,19 @@ func (s *Store) GetListing(ctx context.Context, id string) (domain.Listing, erro
 		return domain.Listing{}, fmt.Errorf("get listing: %w", err)
 	}
 	return listing, nil
+}
+
+func (s *Store) SetListingTracking(ctx context.Context, id string, enabled bool) error {
+	result, err := s.db.ExecContext(ctx, `UPDATE listings SET tracking_enabled=$2 WHERE id=$1`, id, enabled)
+	if err != nil {
+		return fmt.Errorf("set tracking: %w", err)
+	}
+	n, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
 }

@@ -27,7 +27,7 @@ func (s *Store) PriceHistory(ctx context.Context, id string, from *time.Time, to
 	if from != nil {
 		lower = *from
 	}
-	rows, err := s.db.QueryContext(ctx, `SELECT l.id,l.product_id,l.retailer_id,l.url,l.retailer_product_id,
+	rows, err := s.db.QueryContext(ctx, `SELECT l.id,l.product_id,l.retailer_id,l.url,l.retailer_product_id,NOT l.tracking_enabled,
  o.observed_at,o.observed_at_ns_remainder,o.source,o.stock,o.currency,
  o.msrp,o.retailer_list_price,o.sale_price,o.offer_price,o.msrp_source
  FROM price_observations o JOIN listings l ON l.id=o.listing_id

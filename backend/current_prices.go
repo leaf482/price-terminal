@@ -43,6 +43,12 @@ type bestJSON struct {
 }
 
 func currentResponse(value persistence.CurrentListing, status collector.Status, now time.Time, maxAge time.Duration) currentJSON {
+	if value.Listing.TrackingDisabled {
+		status.State = "disabled"
+		status.Error = ""
+	} else if status.State == "disabled" {
+		status.State = "never_attempted"
+	}
 	result := currentJSON{Listing: listingResponse(value.Listing), Collection: status, Freshness: "missing"}
 	if value.Observation == nil {
 		return result

@@ -8,6 +8,33 @@ and current-price APIs are available. No real retailer is collected yet.
 
 ## Manual observations and deployment configuration (Task 26)
 
+### Listing tracking (Task 28)
+
+Listings default to tracking enabled. `PATCH /listings/{id}/tracking` with
+`{"tracking_enabled": false}` disables provider collection; send `true` to resume.
+The endpoint requires an explicit boolean (400 otherwise), returns 404 for a
+missing Listing and 200 with Listing ID/state on success. Listing/current-price
+responses include `tracking_enabled`. Product detail provides Enable/Disable
+tracking and keeps disabled Listings visible with their current data and history.
+
+Scheduled cycles skip disabled Listings; manual Refresh price returns 409
+`tracking_disabled`. Enabling does not configure a provider: existing provider
+configuration is still required. A collection already in flight may finish its
+network call, but the PostgreSQL write guard serializes with the tracking update:
+if disabling commits first, the collection cannot append its observation. A write
+committed before disabling remains legitimate history. No historical facts,
+promotions, alert configurations or triggered events are removed or rewritten.
+
+Explicit **Record price remains allowed while tracking is disabled**, including
+normal post-write alert evaluation. Tracking state does not change observation
+timestamps, freshness, or existing comparison rules. The dashboard shows disabled
+collection separately from failures; re-enabling permits the next configured
+cycle or manual refresh. In Go, `Listing.TrackingDisabled` defaults to false and
+`TrackingEnabled()` exposes its positive meaning; the database/API use the
+positive `tracking_enabled` boolean.
+
+### Recording observations
+
 `POST /listings/{id}/observations` accepts an immutable manual observation:
 
 ```json
@@ -270,8 +297,9 @@ Goose owns `public.goose_db_version` and its supporting primary-key index and
 sequence. Migration 2 adds `products`, `retailers`, and `listings`. Migration 3
 adds `price_observations`. Migration 4 adds append-only `promotions` evidence.
 Migration 5 adds `price_alerts` and `price_alert_events`. Migration 6 adds
-`observation_invalidations` and a Product-to-Listing index; the latest version is 6.
-Rolling it back drops that table/index and returns to version 5. Do not roll back migration 6 on
+`observation_invalidations` and a Product-to-Listing index. Migration 7 adds
+`listings.tracking_enabled`, defaulting existing and new Listings to true; the latest version is 7.
+Rolling migration 7 back drops only tracking state and returns to version 6 (reapply defaults tracking to enabled). Rolling migration 6 back drops the invalidation table/index and returns to version 5. Do not roll back migration 6 on
 real data casually: previously excluded observations would become visible again.
 Migration SQL and its version update run in one transaction by
 default. Do not edit applied migration files; add a new numbered file instead.

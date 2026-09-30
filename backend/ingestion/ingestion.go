@@ -33,9 +33,10 @@ func New(p provider.Provider, store Store) *Ingestor {
 // Only a successful, validated collection creates this value. Its zero value is
 // invalid. Retain it if persistence fails; retry Persist, not Ingest.
 type Collected struct {
-	id          string
-	listing     domain.Listing
-	observation domain.PriceObservation
+	id           string
+	listing      domain.Listing
+	observation  domain.PriceObservation
+	fromProvider bool
 }
 
 func (c Collected) ID() string                           { return c.id }
@@ -57,6 +58,18 @@ func (i *Ingestor) Ingest(ctx context.Context, resultID string, listing domain.L
 	if err := listing.Validate(); err != nil {
 		return Collected{}, fmt.Errorf("ingest listing: %w", err)
 	}
+	if listing.TrackingDisabled {
+		return Collected{}, domain.ErrTrackingDisabled
+	}
+	// Scheduled jobs may wait behind another Listing; recheck before contacting
+	// the provider rather than relying on the cycle's earlier snapshot.
+	current, err := i.store.GetListing(ctx, listing.ID)
+	if err != nil {
+		return Collected{}, fmt.Errorf("ingest listing lookup: %w", err)
+	}
+	if current.TrackingDisabled {
+		return Collected{}, domain.ErrTrackingDisabled
+	}
 	observation, err := i.provider.Collect(ctx, listing)
 	if err != nil {
 		slog.Warn("ingestion_failure", "listing_id", listing.ID, "observation_id", resultID, "stage", "provider")
@@ -66,7 +79,8 @@ func (i *Ingestor) Ingest(ctx context.Context, resultID string, listing domain.L
 		slog.Warn("ingestion_failure", "listing_id", listing.ID, "observation_id", resultID, "stage", "validation")
 		return Collected{}, fmt.Errorf("ingest result: %w", err)
 	}
-	return i.Record(ctx, resultID, listing, observation)
+	collected := Collected{id: resultID, listing: listing, observation: observation, fromProvider: true}
+	return collected, i.Persist(ctx, collected)
 }
 
 // Record accepts already observed facts, including manual entries, without a
@@ -96,13 +110,27 @@ func (i *Ingestor) Persist(ctx context.Context, collected Collected) error {
 	}
 	// Reject stale or fabricated source/relationship context instead of attaching
 	// facts collected for it to a different stored listing. No related rows are created.
-	if stored != collected.listing {
+	if collected.fromProvider && stored.TrackingDisabled {
+		return domain.ErrTrackingDisabled
+	}
+	// Tracking is mutable operational state, not source identity.
+	expected := collected.listing
+	expected.TrackingDisabled = stored.TrackingDisabled
+	if stored != expected {
 		return fmt.Errorf("ingest persist: listing differs from stored source or relationships")
 	}
 	if err := ctx.Err(); err != nil {
 		return fmt.Errorf("ingest persist: %w", err)
 	}
-	if err := i.store.InsertPriceObservation(ctx, collected.id, collected.observation); err != nil {
+	write := i.store.InsertPriceObservation
+	if collected.fromProvider {
+		if guarded, ok := i.store.(interface {
+			InsertCollectedObservation(context.Context, string, domain.PriceObservation) error
+		}); ok {
+			write = guarded.InsertCollectedObservation
+		}
+	}
+	if err := write(ctx, collected.id, collected.observation); err != nil {
 		slog.Warn("ingestion_failure", "listing_id", collected.listing.ID, "observation_id", collected.id, "stage", "persistence")
 		return fmt.Errorf("ingest persist: %w", err)
 	}

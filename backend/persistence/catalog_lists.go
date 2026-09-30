@@ -46,7 +46,7 @@ func (s *Store) ListListingsByProduct(ctx context.Context, productID string, lim
 	if limit < 1 || limit > MaxCatalogListLimit {
 		return nil, fmt.Errorf("list listings: limit must be between 1 and %d", MaxCatalogListLimit)
 	}
-	rows, err := s.db.QueryContext(ctx, `SELECT id, product_id, retailer_id, url, retailer_product_id
+	rows, err := s.db.QueryContext(ctx, `SELECT id, product_id, retailer_id, url, retailer_product_id, NOT tracking_enabled
 		FROM listings WHERE product_id = $1 ORDER BY id LIMIT $2`, productID, limit)
 	if err != nil {
 		return nil, fmt.Errorf("list listings: %w", err)
@@ -55,7 +55,7 @@ func (s *Store) ListListingsByProduct(ctx context.Context, productID string, lim
 	listings := make([]domain.Listing, 0)
 	for rows.Next() {
 		var listing domain.Listing
-		if err := rows.Scan(&listing.ID, &listing.ProductID, &listing.RetailerID, &listing.URL, &listing.RetailerProductID); err != nil {
+		if err := rows.Scan(&listing.ID, &listing.ProductID, &listing.RetailerID, &listing.URL, &listing.RetailerProductID, &listing.TrackingDisabled); err != nil {
 			return nil, fmt.Errorf("list listings: %w", err)
 		}
 		if err := listing.Validate(); err != nil {
