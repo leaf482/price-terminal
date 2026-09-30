@@ -15,7 +15,7 @@ Browser -> Next.js frontend -> Go API -> PostgreSQL
                                Retailers / source APIs
 ```
 
-The frontend renders catalog, current prices, history, promotion explanations, and eventually alert controls. The Go backend owns validation, domain rules, persistence access, and derived-price calculations. PostgreSQL is the initial durable store. The frontend does not query the database directly or implement a second copy of price rules.
+The frontend renders catalog, current prices, history, promotion explanations, alert controls, and triggered events. The Go backend owns validation, domain rules, persistence access, and derived-price calculations. PostgreSQL is the initial durable store. The frontend does not query the database directly or implement a second copy of price rules.
 
 ## Codebase and process boundaries
 
@@ -60,6 +60,8 @@ Use bounded retries for transient failures and avoid immediate retry loops for p
 PriceObservations preserve what a source reported at a particular time. Promotion terms and explicit MSRP claims also require provenance. Collection success/failure metadata is operational data and should remain distinct from market observations.
 
 EffectivePrice, current-price selection, historical aggregates, discount percentages, and alert decisions are derived results. Each needs defined inputs and semantics. Calculations must not overwrite their source observations. Persist derived results only when useful, along with enough input/rule identity to explain or reproduce them.
+
+Alert evaluation runs after ingestion commits an observation, using a separate transaction. Evaluation failure is logged without changing ingestion success or observation facts. PostgreSQL stores alert configuration and immutable triggered events, unique per alert/observation pair. Frontend controls and event reads are bounded. This MVP has no evaluation retry worker or historical backfill. External notifications, delivery attempts/retries, queues, and notification infrastructure are outside project scope.
 
 Current-price queries select a coherent accepted observation by documented observation-time and tie-breaking rules. Do not combine a fresh sale price with an old list price or promotion without explicit provenance. An observation with a missing price must not silently inherit an older price as if newly observed. If a last-known price is shown, retain its separate timestamp and label.
 

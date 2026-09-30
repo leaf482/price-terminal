@@ -7,6 +7,7 @@ package ingestion
 import (
 	"context"
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/leaf482/price-terminal/backend/domain"
@@ -95,6 +96,15 @@ func (i *Ingestor) Persist(ctx context.Context, collected Collected) error {
 	}
 	if err := i.store.InsertPriceObservation(ctx, collected.id, collected.observation); err != nil {
 		return fmt.Errorf("ingest persist: %w", err)
+	}
+	// Alert evaluation is downstream of the committed observation. Its failure
+	// must not turn a successful write into a retryable ingestion failure.
+	if evaluator, ok := i.store.(interface {
+		EvaluateAlerts(context.Context, string) error
+	}); ok {
+		if err := evaluator.EvaluateAlerts(ctx, collected.id); err != nil {
+			log.Printf("alert evaluation failed for persisted observation %q", collected.id)
+		}
 	}
 	return nil
 }

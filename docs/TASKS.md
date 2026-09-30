@@ -104,11 +104,11 @@ Acceptance: run a bounded explicit set of active Listings on a configurable, non
 
 Acceptance: display API-backed products, current Listing prices, stock, freshness, and source links with loading, empty, and error states. Add bounded historical reads for 1D/1W/1M/3M/1Y/ALL, deterministic ordering, conservative historical-low/change metadata, and a selectable history chart that preserves missing points and currency distinctions. Verify backend unit/integration tests and frontend parsing, formatting, lint, and build. No real provider or create/edit forms.
 
-### Tasks 22–23: Combined into Task 20
+### Task 23: Combined into Task 20
 
 The user combined the planned frontend current-price view, historical API, and
-historical chart into Task 20. IDs 22–23 remain superseded references. Task 21 now
-implements the combined promotion MVP below.
+historical chart into Task 20. ID 23 remains a superseded reference. Task 21
+implements the combined promotion MVP below; Task 22 now covers Price Alerts.
 
 ## Promotions, effective price, and MSRP
 
@@ -142,25 +142,17 @@ Acceptance: validate explicit MSRP evidence end to end and label any MSRP-based 
 
 ## Alerts
 
-### Task 30: PriceAlert model and persistence
+### Task 22: Price Alerts MVP
 
-Acceptance: persist listing target, threshold/currency, price basis, stock/freshness rules, and enabled state; define inclusive threshold and re-arm behavior. Test invalid and ambiguous configurations.
+Acceptance: support target-price, percentage-drop, and historical-low alerts on observed offer/sale prices; persist configuration and durable events. Evaluate after successful ingestion without invalidating observations on evaluation failure. Enforce currency, missing-price, stock, and first-observation rules; suppress duplicate alert/observation events while allowing later qualifying events. Add bounded APIs and frontend create/list/enable/disable/event views. Verify domain, ingestion, persistence, API, frontend, and migration behavior. Promotions/EffectivePrice, external delivery, auth, and generic rule engines are excluded.
 
-### Task 31: Alert configuration API
+### Tasks 30–32 and 34: Covered by Task 22
 
-Acceptance: expose minimal alert configuration operations with validation and explicit ownership/access assumptions for the intended deployment. Choose the initial delivery destination model before delivery work.
+The combined MVP includes alert model/persistence, configuration API, evaluation, and frontend controls.
 
-### Task 32: Alert evaluation
+### Task 33: Removed from project scope
 
-Acceptance: evaluate alerts against eligible observations with traceable decisions and duplicate suppression. Verify stale/missing data, stock rules, repeated collections, and conditional price scenarios.
-
-### Task 33: First notification delivery channel
-
-Acceptance: deliver evaluated alert events through one selected channel with durable attempt state, bounded retries, and documented duplicate-delivery handling. Test failures without sending real notifications.
-
-### Task 34: Alert frontend controls
-
-Acceptance: create, view, and disable alerts through the API; display threshold basis, conditions, and useful delivery status. Verify validation and error states.
+There is no external notification delivery: no email, SMS, push, webhooks, delivery attempts, or delivery retries. Triggered events are stored and viewed in the application only.
 
 ## Additional providers and reliability
 
@@ -174,7 +166,7 @@ Acceptance: refine backoff and source-specific rate behavior using actual provid
 
 ### Task 37: Operational visibility
 
-Acceptance: expose enough collection/delivery outcomes and timing information to diagnose failed or stale listings; document a small health-check procedure and verify logs omit secrets.
+Acceptance: expose enough collection/alert-evaluation outcomes and timing information to diagnose failed or stale listings; document a small health-check procedure and verify logs omit secrets.
 
 ### Task 38: Data-quality handling
 

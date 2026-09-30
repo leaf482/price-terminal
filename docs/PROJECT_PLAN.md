@@ -14,7 +14,7 @@ These documents describe intended behavior, not existing functionality. Task 0 a
 - Preserve immutable observations so history remains auditable.
 - Show current known prices with their freshness, source, currency, and stock state.
 - Explain promotions and conditional effective prices without presenting potential savings as guaranteed.
-- Notify users when an explicitly defined price condition is met.
+- Store and display alert events when an explicitly defined observed-price condition is met.
 - Add providers without coupling their failures or retailer-specific behavior to the core domain.
 - Prefer a small, maintainable system with clear tests and operational visibility.
 
@@ -38,9 +38,9 @@ Begin with a limited, documented set of promotion rules. Unknown eligibility, st
 
 ### Alerts
 
-Introduce listing-level PriceAlerts with explicit thresholds, currencies, price bases, and stock/freshness rules. Evaluate against trustworthy observations and suppress duplicate notifications. Conditional EffectivePrice alerts require an explicit eligibility scenario; ordinary price alerts must not silently include coupons or cashback.
+Support listing-level target-price, percentage-drop, and historical-low PriceAlerts with explicit currency and optional in-stock requirements. Evaluate the observed offer price, otherwise sale price, and retain traceable events without duplicating an alert/observation pair. Promotions and EffectivePrice do not participate.
 
-The delivery channel and user ownership model will be selected before alert delivery is implemented. Reliable delivery and visible failures matter more than supporting many channels.
+Users configure, enable/disable, and view alerts and triggered events in the frontend. External notifications (email, SMS, push, webhooks), delivery attempts/retries, and user accounts are outside project scope.
 
 ## Product principles
 
@@ -81,7 +81,7 @@ Exact versions, routing libraries, database drivers, migration tooling, chart li
 4. **Collection and current-price MVP:** schedule bounded collection, query current known prices, and display listings, freshness, and stock in a minimal frontend.
 5. **History:** expose bounded price history and a labeled chart without hiding missing data.
 6. **Promotions and price meaning:** preserve promotion facts, calculate limited scenario-based effective prices, and validate MSRP-specific display and comparisons. MSRP semantics apply from the first domain implementation.
-7. **Alerts:** add alert configuration, evaluation, and a reliable initial notification channel.
+7. **Alerts:** add alert configuration, evaluation, durable triggered events, and frontend controls. No external notification delivery.
 8. **Additional providers and reliability:** prove extensibility, strengthen retry behavior, visibility, backup/recovery, and operational checks. Basic isolation and correctness are required earlier, not postponed to this phase.
 9. **Later product matching:** propose cross-retailer matches with variant evidence and review before expanding automation.
 

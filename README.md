@@ -192,9 +192,10 @@ The initial file, `backend/migrations/00001_migration_bootstrap.sql`, contains
 Its purpose is to prove the workflow. It creates no application objects.
 Goose owns `public.goose_db_version` and its supporting primary-key index and
 sequence. Migration 2 adds `products`, `retailers`, and `listings`. Migration 3
-adds `price_observations`. Migration 4 adds append-only `promotions` evidence;
-the latest version is 4. Rolling it back drops only the promotion table and returns
-to version 3, retaining observations and catalog data.
+adds `price_observations`. Migration 4 adds append-only `promotions` evidence.
+Migration 5 adds `price_alerts` and `price_alert_events`; the latest version is 5.
+Rolling it back drops only alerts/events and returns to version 4, retaining
+promotions, observations, and catalog data.
 Migration SQL and its version update run in one transaction by
 default. Do not edit applied migration files; add a new numbered file instead.
 
@@ -216,7 +217,7 @@ goose -env .env -dir backend/migrations -timeout 30s postgres "dbname=price_term
 Only the target database name is overridden; host, port, user, password, and TLS
 still come from the existing configuration. Repeat the same disposable-target
 command with `up`, `down`, then `up` to check no-op, rollback, and reapply.
-Use these read-only checks to inspect metadata and confirm five application tables:
+Use these read-only checks to inspect metadata and confirm seven application tables:
 
 ```sh
 docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d price_terminal_migration_check -c "TABLE public.goose_db_version;"'
@@ -366,6 +367,70 @@ Listing ID. The best result identifies the retailer, Listing, currency, amount,
 and chosen basis. This compares observed item prices only: no shipping, tax,
 coupons, promotions, currency conversion, or EffectivePrice calculation. The
 example's failed Listing intentionally prevents a product-wide best-price claim.
+
+## Observed-price alerts
+
+Apply migration 5 before using alerts or collecting observations with alert evaluation.
+On each Product detail Listing, create a target-price, percentage-drop, or
+historical-low alert, enable/disable it, and view triggered events. Use Refresh
+alerts/events to fetch changes from collection; no browser polling is required.
+There is no external notification delivery or user/account system.
+
+All alert APIs return the existing `{ "data": ... }` envelope:
+
+- `POST /listings/{id}/alerts`: create; returns 201.
+- `GET /listings/{id}/alerts`: all configured alerts, ordered by ID, at most 100.
+- `PATCH /listings/{id}/alerts/{alertID}` with `{"enabled":false}` or
+  `{"enabled":true}`: change enabled state; returns 200.
+- `GET /listings/{id}/alert-events`: `{events: [...], truncated: boolean}`,
+  newest 100 events, ordered by trigger time then alert/observation IDs.
+
+Example POST bodies (identities are assigned by the server):
+
+```json
+{"kind":"target","currency":"USD","threshold_minor_units":8000,"require_in_stock":true}
+```
+
+```json
+{"kind":"drop","currency":"JPY","drop_basis_points":1000,"require_in_stock":false}
+```
+
+```json
+{"kind":"historical_low","currency":"USD"}
+```
+
+Currency is required for every alert. Target amounts use integer minor units;
+explicit zero is valid, missing/null thresholds are invalid. Drop thresholds use
+1–10000 basis points (0.01–100%). `enabled` and `require_in_stock` default to true.
+Other types' numeric parameters must be absent. Invalid input returns 400,
+missing Listing/alert 404, the 100-alert-per-Listing limit 409 (including disabled
+alerts), and database failures a generic 500. No delete or condition-edit API is
+provided; enable/disable preserves event meaning.
+
+The price basis is **observed offer price, otherwise sale price**, as in current
+prices/history. No reference prices, coupons, promotions, or EffectivePrice are
+used. Each alert compares only its currency and, when requested, in-stock
+observations. Target price is inclusive (`price <= threshold`). A drop uses the
+immediately previous comparable observation and exact percentage arithmetic;
+a historical low is strictly below the minimum of earlier comparable observations.
+Earlier means observation timestamp (including nanoseconds), then bytewise result
+ID for equal times. The current observation is excluded. Without an earlier
+comparable value, drop/low cannot trigger; a zero previous price cannot define a
+percentage drop. Stock-only/missing prices do not trigger.
+
+Ingestion evaluates enabled alerts after a successful new observation write, in
+a separate transaction. Events preserve observed value/basis, observation identity
+and time, trigger time, and previous/minimum comparison value when applicable.
+The same alert/observation pair produces at most one event; later qualifying
+observations may produce new events even with identical prices. Creation or
+re-enabling does not evaluate old observations. Future-dated observations are
+excluded; accepted past observations have no implicit age cutoff. Comparisons use
+earlier data available when evaluated, with no retroactive event rewriting.
+
+Evaluation failures are logged with observation identity and do not invalidate
+the committed observation or collection success. This MVP does not automatically
+retry evaluation, so a failure can leave an observation without alert events.
+There are no delivery attempts, email, SMS, push, webhooks, or notification queues.
 
 ## Frontend
 
