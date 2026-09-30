@@ -16,6 +16,7 @@ import (
 )
 
 type promoStub struct {
+	writes                            int
 	p                                 domain.Promotion
 	observation                       *domain.PriceObservation
 	writeErr, readErr, errorPromotion error
@@ -28,8 +29,61 @@ func (s *promoStub) CurrentListing(context.Context, string) (persistence.Current
 	return persistence.CurrentListing{Listing: domain.Listing{ID: "l"}, Observation: s.observation}, s.readErr
 }
 func (s *promoStub) InsertPromotion(_ context.Context, p domain.Promotion) error {
+	s.writes++
 	s.p = p
 	return s.writeErr
+}
+
+func TestPromotionAmountPresence(t *testing.T) {
+	for _, kind := range []string{"fixed", "cashback", "membership"} {
+		for _, amount := range []struct {
+			name, json string
+			valid      bool
+		}{
+			{"missing minor units", `{"currency":"USD"}`, false},
+			{"null minor units", `{"minor_units":null,"currency":"USD"}`, false},
+			{"explicit zero", `{"minor_units":0,"currency":"USD"}`, true},
+			{"null amount", `null`, false},
+			{"fractional amount", `{"minor_units":0.5,"currency":"USD"}`, false},
+		} {
+			t.Run(kind+"/"+amount.name, func(t *testing.T) {
+				s := &promoStub{}
+				a := promotionAPI{store: s}
+				mux := http.NewServeMux()
+				mux.HandleFunc("POST /listings/{id}/promotions", a.create)
+				requirement := "none"
+				if kind == "membership" {
+					requirement = "membership"
+				}
+				body := `{"id":"p","source":"fixture","observed_at":"2026-09-29T00:00:00Z","kind":"` + kind + `","amount":` + amount.json + `,"requirement":"` + requirement + `","stacking":"unknown","terms":"terms"}`
+				w := httptest.NewRecorder()
+				mux.ServeHTTP(w, httptest.NewRequest("POST", "/listings/l/promotions", strings.NewReader(body)))
+				if !amount.valid {
+					if w.Code != 400 || s.writes != 0 {
+						t.Fatalf("status=%d writes=%d body=%s", w.Code, s.writes, w.Body.String())
+					}
+					return
+				}
+				if w.Code != 201 || s.writes != 1 || s.p.Amount == nil || s.p.Amount.MinorUnits != 0 || s.p.Amount.Currency != domain.USD {
+					t.Fatalf("zero not preserved: status=%d writes=%d promotion=%+v", w.Code, s.writes, s.p)
+				}
+				var result struct {
+					Data struct {
+						Amount struct {
+							MinorUnits *int64 `json:"minor_units"`
+							Currency   string `json:"currency"`
+						} `json:"amount"`
+					} `json:"data"`
+				}
+				if err := json.Unmarshal(w.Body.Bytes(), &result); err != nil {
+					t.Fatal(err)
+				}
+				if result.Data.Amount.MinorUnits == nil || *result.Data.Amount.MinorUnits != 0 || result.Data.Amount.Currency != "USD" {
+					t.Fatal("response shape/zero changed", w.Body.String())
+				}
+			})
+		}
+	}
 }
 func (s *promoStub) GetPromotion(context.Context, string, string) (domain.Promotion, error) {
 	return s.p, s.errorPromotion

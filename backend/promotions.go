@@ -61,7 +61,16 @@ func registerPromotionRoutes(mux *http.ServeMux, store promotionStore) {
 	mux.HandleFunc("GET /listings/{id}/effective-price", a.effective)
 }
 func (a promotionAPI) create(w http.ResponseWriter, r *http.Request) {
-	var body *promotionJSON
+	// Override only the request amount: nil minor_units means omitted or null,
+	// while a non-nil pointer to zero is an intentionally supplied amount.
+	// Keep the response DTO and its numeric representation unchanged.
+	var body *struct {
+		promotionJSON
+		Amount *struct {
+			MinorUnits *int64          `json:"minor_units"`
+			Currency   domain.Currency `json:"currency"`
+		} `json:"amount"`
+	}
 	if err := decodeCatalogBody(w, r, &body); err != nil || body == nil {
 		productError(w, 400, "invalid_request", "expected promotion evidence")
 		return
@@ -73,7 +82,11 @@ func (a promotionAPI) create(w http.ResponseWriter, r *http.Request) {
 	}
 	p := domain.Promotion{ID: body.ID, ListingID: id, Source: body.Source, ObservedAt: body.ObservedAt, StartsAt: body.StartsAt, EndsAt: body.EndsAt, Kind: body.Kind, BasisPoints: body.BasisPoints, Requirement: body.Requirement, Stacking: body.Stacking, Terms: body.Terms}
 	if body.Amount != nil {
-		p.Amount = &domain.Money{MinorUnits: body.Amount.MinorUnits, Currency: body.Amount.Currency}
+		if body.Amount.MinorUnits == nil {
+			productError(w, 400, "invalid_promotion", "amount.minor_units must be an explicit integer")
+			return
+		}
+		p.Amount = &domain.Money{MinorUnits: *body.Amount.MinorUnits, Currency: body.Amount.Currency}
 	}
 	if err := p.Validate(); err != nil {
 		productError(w, 400, "invalid_promotion", err.Error())
