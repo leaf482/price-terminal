@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -93,7 +94,8 @@ func run() error {
 	go func() { collectorDone <- runtime.Run(ctx) }()
 	server := &http.Server{
 		Addr:              "127.0.0.1:8080",
-		Handler:           newHandler(db.PingContext, store, store, currentAPI{store: store, status: runtime.Status, maxAge: maxAge, now: time.Now}),
+		Handler:           newHandler(db.PingContext, store, store, currentAPI{store: store, status: runtime.Status, collect: runtime.Collect, maxAge: maxAge, now: time.Now}),
+		BaseContext:       func(net.Listener) context.Context { return ctx },
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 

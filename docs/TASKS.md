@@ -104,11 +104,9 @@ Acceptance: run a bounded explicit set of active Listings on a configurable, non
 
 Acceptance: display API-backed products, current Listing prices, stock, freshness, and source links with loading, empty, and error states. Add bounded historical reads for 1D/1W/1M/3M/1Y/ALL, deterministic ordering, conservative historical-low/change metadata, and a selectable history chart that preserves missing points and currency distinctions. Verify backend unit/integration tests and frontend parsing, formatting, lint, and build. No real provider or create/edit forms.
 
-### Task 23: Combined into Task 20
+### Task 23: Catalog Management and Collection Controls
 
-The user combined the planned frontend current-price view, historical API, and
-historical chart into Task 20. ID 23 remains a superseded reference. Task 21
-implements the combined promotion MVP below; Task 22 now covers Price Alerts.
+Acceptance: reuse catalog APIs for Product/Retailer/Listing creation and bounded browsing with clear relationships, success/error states, and refreshed frontend data. Display process-local collection status separately from observation freshness. Add a synchronous single-Listing manual trigger through the configured runtime/ingestion path, prevent overlapping attempts for that Listing, and report unavailable providers honestly. Verify forms, conflicts, status semantics, collection success/failure, and existing functionality. No edit/delete, new scheduler, provider implementation, or schema changes.
 
 ## Promotions, effective price, and MSRP
 

@@ -4,6 +4,7 @@ package collector
 import (
 	"context"
 	"crypto/rand"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -77,15 +78,55 @@ func (r *Runtime) Status(id string) Status {
 	return s
 }
 
-func (r *Runtime) start(id string) {
+func (r *Runtime) start(id string) bool {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	s := r.states[id]
+	if s.State == "collecting" {
+		return false
+	}
 	now := time.Now().UTC()
 	s.LastAttemptedAt = &now
 	s.State = "collecting"
 	s.Error = ""
 	r.states[id] = s
+	return true
+}
+
+var ErrUnavailable = errors.New("no provider configured for listing")
+var ErrBusy = errors.New("listing collection already in progress")
+
+// Collect performs one configured attempt synchronously. The same per-listing
+// guard is used by scheduled cycles; no work is queued or retried.
+func (r *Runtime) Collect(ctx context.Context, id string) (err error) {
+	if r == nil {
+		return ErrUnavailable
+	}
+	var selected *Target
+	for i := range r.targets {
+		if r.targets[i].ListingID == id {
+			selected = &r.targets[i]
+			break
+		}
+	}
+	if selected == nil {
+		return ErrUnavailable
+	}
+	if err = ctx.Err(); err != nil {
+		return err
+	}
+	if !r.start(id) {
+		return ErrBusy
+	}
+	defer func() { r.finish(id, err) }()
+	ctx, cancel := context.WithTimeout(ctx, r.timeout)
+	defer cancel()
+	listing, err := r.store.GetListing(ctx, id)
+	if err != nil {
+		return err
+	}
+	_, err = ingestion.New(selected.Provider, r.store).Ingest(ctx, rand.Text(), listing)
+	return err
 }
 func (r *Runtime) finish(id string, err error) {
 	r.mu.Lock()
@@ -133,7 +174,9 @@ func (r *Runtime) cycle(ctx context.Context) {
 			break
 		}
 		// Source resolution is part of this attempt; missing listings remain errors.
-		r.start(target.ListingID)
+		if !r.start(target.ListingID) {
+			continue
+		}
 		lookupCtx, cancel := context.WithTimeout(ctx, r.timeout)
 		listing, err := r.store.GetListing(lookupCtx, target.ListingID)
 		cancel()

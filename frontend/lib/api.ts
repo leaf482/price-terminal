@@ -28,6 +28,10 @@ export type Current = {
     freshness: string;
     collection: {
         state: string;
+        active?: boolean;
+        last_attempted_at?: string;
+        last_successful_at?: string;
+        error?: string;
     };
 };
 export type Prices = {
@@ -104,6 +108,8 @@ export function parsePrices(x: unknown): Prices {
             text(l.retailer_product_id);
         text(row.freshness);
         text(object(row.collection).state);
+        const status=object(row.collection);
+        for(const k of ['last_attempted_at','last_successful_at','error']) if(status[k]!==undefined) text(status[k]);
         if (row.observation !== null)
             parseObservation(row.observation);
     }

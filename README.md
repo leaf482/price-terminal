@@ -434,6 +434,26 @@ There are no delivery attempts, email, SMS, push, webhooks, or notification queu
 
 ## Frontend
 
+Open **Manage catalog** (`/catalog`) to create Products, Retailers, and linked
+Listings using the existing catalog APIs. Product/Retailer suggestions and browse
+lists are bounded to 100 records; exact IDs can also be entered. Listings are
+browsed by Product and retain their exact URL and optional retailer product ID.
+There are no edit/delete operations.
+
+Product detail separates source observation time from process-local collection
+attempt/success times. **Refresh price** sends `POST /listings/{id}/collect`,
+which synchronously uses that Listing's existing configured provider and ingestion
+path. It returns 200 on success, 404 for a missing Listing, 409 if that Listing is
+already collecting, 503 if no provider is configured, or a generic 502 on failure.
+Failures retain previous observations and their timestamps. Both manual and
+scheduled attempts share a per-Listing guard; overlapping attempts are not queued.
+**Reload status** reads fresh server state without collecting.
+
+Creating a Listing does not configure a provider. Collection still uses the
+startup `COLLECTOR_CONFIG` Fake fixtures described above; restart the backend after
+changing that configuration. A successful Fake collection preserves its fixture's
+observation time. Collection status resets on backend restart.
+
 ### Promotion evidence and derived scenarios
 
 Apply migration 4 before using promotion features. Evidence is appended with a

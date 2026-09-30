@@ -112,13 +112,15 @@ func comparableBest(items []currentJSON) (*bestJSON, string) {
 }
 
 type currentAPI struct {
-	store  currentStore
-	status func(string) collector.Status
-	maxAge time.Duration
-	now    func() time.Time
+	collect func(context.Context, string) error
+	store   currentStore
+	status  func(string) collector.Status
+	maxAge  time.Duration
+	now     func() time.Time
 }
 
 func registerCurrentRoutes(mux *http.ServeMux, api currentAPI) {
+	mux.HandleFunc("POST /listings/{id}/collect", api.collectListing)
 	mux.HandleFunc("GET /listings/{id}/price", api.listing)
 	mux.HandleFunc("GET /products/{id}/prices", api.product)
 }
