@@ -61,6 +61,9 @@ func newHandler(ping func(context.Context) error, products productStore, catalog
 	}
 	if len(prices) > 0 {
 		registerCurrentRoutes(mux, prices[0])
+		if dashboard, ok := catalog.(dashboardStore); ok {
+			mux.HandleFunc("GET /dashboard", dashboardHandler(dashboard, prices[0]))
+		}
 	}
 	return mux
 }

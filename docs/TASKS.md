@@ -126,9 +126,9 @@ Acceptance: check a small set of practical official/third-party APIs for access,
 
 Acceptance: record manual observations through the domain constructor and shared persistence/alert path; preserve absent versus zero prices, currency and MSRP evidence. Provide a simple detail-page form, refresh current/history/events, document an opt-in manual demo, and validate environment-based runtime configuration. No real provider, authentication, automatic seed, or cloud infrastructure. The former narrow EffectivePrice calculation task was covered by Task 21.
 
-### Task 27: Covered by Task 21
+### Task 27: Product dashboard and search/filter
 
-The selected-scenario API and explanation are included in Task 21.
+Acceptance: show bounded Product summaries with Listing counts, comparable observed prices, valid observation times, separate process-local collection status, and alert events triggered in the last seven days. Reuse current-price rules through one summary endpoint; client-side name/brand/model search and price/error/alert filters apply to the first 20 products. Missing/stale/mixed-currency values never become a fabricated best price. The former selected-scenario API and explanation task was covered by Task 21.
 
 ### Task 28: Covered by Task 21
 
