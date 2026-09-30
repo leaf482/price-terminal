@@ -118,9 +118,9 @@ Acceptance: append narrow fixed/percentage/cashback/membership promotion evidenc
 
 Acceptance: append reason/time invalidation records while retaining immutable observation facts; exclude invalid observations from current/history/alert evaluation and expose bounded audit/invalidation controls. Preserve historical promotion/event evidence, add safe diagnostic logs and process-local failure counts, and verify Docker pg_dump/pg_restore against disposable seeded databases including Goose metadata. Review existing query/index shapes without speculative infrastructure. The former promotion-persistence task was covered by Task 21.
 
-### Task 25: Promotion collection for one provider
+### Task 25: Real provider selection and first working adapter
 
-Acceptance: normalize a narrow promotion type from fixtures into preserved evidence through ingestion. Unsupported or ambiguous terms do not become invented executable discounts.
+Acceptance: check a small set of practical official/third-party APIs for access, stable listing prices/currency, and retained-history permission. Implement one narrow adapter and connect existing manual/scheduled collection only after the evidence clears that gate; otherwise stop after documentation. Fixture tests must remain independent of live access, and live verification must be reported honestly. The Task 25 decision in [provider research](PROVIDER_RESEARCH.md) is BLOCKED; no adapter is approved. Promotion collection remains deferred to a separately scoped task.
 
 ### Task 26: Covered by Task 21
 
@@ -132,7 +132,7 @@ The selected-scenario API and explanation are included in Task 21.
 
 ### Task 28: Covered by Task 21
 
-The separate promotion and derived-result display is included in Task 21. Task 25 provider collection remains deferred; subsequent scope is unchanged.
+The separate promotion and derived-result display is included in Task 21. Provider promotion collection remains deferred; subsequent scope is unchanged.
 
 ### Task 29: MSRP provenance and comparisons
 

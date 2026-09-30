@@ -891,3 +891,124 @@ such as the still-unresolved consenting-merchant route. No replacement is approv
 
 Only this decision document changes. The [architecture](ARCHITECTURE.md), Go
 types, EUR support, dependencies, interfaces, and roadmap remain unchanged.
+
+## Task 25: Real provider selection and implementation gate
+
+Reviewed September 30, 2026. **Outcome: BLOCKED. Selected provider: none.**
+This is a project implementation gate, not a claim that every candidate prohibits
+historical tracking. Four third-party sources were checked because earlier
+retailer decisions did not clear access/retention requirements, and the fuel
+source failed domain fit. Public technical documentation alone does not establish
+data-use rights. No account was registered, subscription purchased, or live
+collection attempted during this review.
+
+### Price API (metoda): NEEDS CLARIFICATION
+
+The [official getting-started guide](https://readme.priceapi.com/docs/make-your-first-request)
+offers trial registration and source/country-specific product and offer lookup,
+including source identifiers rather than mandatory keyword matching. Its
+[workflow](https://readme.priceapi.com/docs/basic-workflow) is asynchronous.
+The [published terms](https://www.priceapi.com/legal/terms) describe price and
+availability data (§2.1), restrict use to the customer's own purposes unless
+third-party use is approved (§2.2), and restrict registration to business use
+(§3.4). Acceptance is not guaranteed (§3.3). These currently indexed terms carry
+the legacy version date July 27, 2015; obtain the applicable agreement before
+relying on them. Simultaneous-call limits may apply (§2.3).
+
+Business eligibility for this project is unconfirmed. Neither permanent
+normalized-history retention nor post-termination retention was established by
+the reviewed terms; own-purpose use is not treated as that grant. Portfolio
+display to others needs separate clarification. Source-specific currency and
+exact seller/listing continuity still require validation if permission clears.
+**Not approved:** request the current applicable contract and explicit retention
+and intended-display rights, rather than infer them from a downloadable result.
+
+### PriceCharting: BLOCKED under standard published API terms
+
+The [API documentation](https://www.pricecharting.com/api-documentation) requires
+a subscription token, provides product IDs and condition-specific price values,
+uses integer pennies for API prices, and specifies USD for CSV prices. It limits
+API calls to one per second. Price values are not automatically executable
+retailer offers or stock evidence; its separate marketplace interfaces need
+separate identity/availability review.
+
+The same documentation permits caching/server storage but requires purging all
+API/CSV data when the subscription ends. Sharing through applications used by
+others requires express permission and a commercial license. The
+[site terms](https://www.pricecharting.com/page/terms-of-service) also distinguish
+internal use from applications accessible to third parties. No normalized-history
+exception was established. Temporary authorized caching therefore does not meet
+this project's durable history requirement. A negotiated license could change
+the decision; a normal subscription alone does not clear it.
+
+### Rainforest API (Traject Data): NEEDS CLARIFICATION
+
+The [official product request documentation](https://docs.trajectdata.com/rainforestapi/product-data-api/parameters/product)
+documents an API key and lookup by Amazon domain plus ASIN, or product URL.
+The [product site](https://trajectdata.com/ecommerce/rainforest-api/) advertises
+commerce data access; this is a third-party API, not an Amazon-issued data license.
+Its [FAQ](https://trajectdata.com/faqs/) explains that requests acquire live data
+and no sandbox is offered. Exact plan quota and offer/currency/stock mapping would
+still need confirmation before implementation.
+
+The site's [current terms link](https://trajectdata.com/traject-data-terms-of-service/)
+serves ScraperAPI Terms of Use effective November 18, 2025. It provides a limited
+service license (§2.1), requires prior consent for applications interacting with
+the service (§2.5), reserves proprietary rights (§8.2), and assigns responsibility
+for third-party terms (§10). An enterprise agreement can override conflicts.
+The relationship between these general clauses and an API subscription's data
+rights is unresolved. No explicit permanent normalized-observation grant was
+established. Ask which API-specific agreement governs, including retention after
+termination and portfolio display. Do not assume paying an intermediary grants
+rights over all upstream data or removes upstream restrictions.
+
+### Keepa: NEEDS CLARIFICATION; strongest technical follow-up
+
+The [official API overview](https://keepa.com/api-docs/) documents subscription
+access, an account API key, and `/product` requests by marketplace and ASIN.
+[Plans and tokens](https://keepa.com/api-docs/plans-tokens.html) describe monthly
+billing and plan-specific token refill rates; unused tokens expire after an hour.
+This is a documented purchase path, not verified credential issuance for this
+project.
+
+The [offer specification](https://keepa.com/api-docs/offer-object.html) provides
+an offer ID stable across requests within a product, seller and condition,
+locale minor-unit prices, update time, and optional stock history. Missing prices
+use sentinels, not zero. Offers may be stale; stock is best-effort. An ASIN alone
+must not merge different sellers, conditions, or fulfillment contexts into one
+Listing. These fields make a narrow implementation technically plausible.
+
+However, the reviewed technical pages do not settle permanent normalized-history
+storage or display rights. The [public terms entry point](https://keepa.com/#!terms)
+did not expose readable agreement text through this review's web retrieval.
+Unofficial reposted terms were not used as authority. This is an evidence gap,
+**not a finding that Keepa prohibits retention**. Access to historical data is
+not itself permission to retain or redistribute it indefinitely. Obtain the
+current applicable API agreement and written clarification before approval.
+
+### Required evidence and narrow implementation boundary
+
+Next action: seek Keepa's applicable API agreement and resolve this exact question:
+may an independent developer retain timestamped item/seller identity, currency,
+observed price and stock indefinitely as normalized PriceObservations, including
+after subscription termination, and display those retained observations in this
+project? Ask separately about private use and any future portfolio/public display,
+required deletion/refresh, attribution, and upstream restrictions. This review
+does not send that request or presume a favorable answer. A named consenting
+merchant granting these rights remains an alternative; none is established here.
+
+Raw-response caching, normalized historical storage, and redistribution are
+different permissions. Discarding raw JSON does not automatically exempt the
+retained facts from contractual restrictions. Conversely, missing explicit
+permission here is not proof of a prohibition. No candidate clears all required
+evidence, so implementation stops at documentation as requested.
+
+If a future review clears Keepa, the proposed first scope is one explicitly
+identified new-condition offer in one supported marketplace/currency, with its
+seller/context and source update time preserved. Offer availability must be
+validated; unknown stock remains unknown. Exclude cross-seller best-offer
+switching, used/refurbished items, inferred MSRP/list/sale semantics, membership
+prices, coupons, shipping-inclusive EffectivePrice, and automatic matching.
+This is a conditional scope proposal, not an approved adapter design or interface
+change. Existing Provider, ingestion, immutable-history, and manual/scheduled
+collection code remain unchanged. No live success is claimed.
