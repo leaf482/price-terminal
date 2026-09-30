@@ -908,20 +908,44 @@ The [official getting-started guide](https://readme.priceapi.com/docs/make-your-
 offers trial registration and source/country-specific product and offer lookup,
 including source identifiers rather than mandatory keyword matching. Its
 [workflow](https://readme.priceapi.com/docs/basic-workflow) is asynchronous.
-The [published terms](https://www.priceapi.com/legal/terms) describe price and
-availability data (§2.1), restrict use to the customer's own purposes unless
-third-party use is approved (§2.2), and restrict registration to business use
-(§3.4). Acceptance is not guaranteed (§3.3). These currently indexed terms carry
-the legacy version date July 27, 2015; obtain the applicable agreement before
-relying on them. Simultaneous-call limits may apply (§2.3).
+The [official terms](https://www.priceapi.com/legal/terms), rechecked September 30,
+2026 through the official page's indexed text, retain the July 27, 2015 version
+date. **Rights of Use, paragraph (2)** grants:
 
-Business eligibility for this project is unconfirmed. Neither permanent
-normalized-history retention nor post-termination retention was established by
-the reviewed terms; own-purpose use is not treated as that grant. Portfolio
-display to others needs separate clarification. Source-specific currency and
-exact seller/listing continuity still require validation if permission clears.
-**Not approved:** request the current applicable contract and explicit retention
-and intended-display rights, rather than infer them from a downloadable result.
+> a right of use, which is unlimited by time and non-exclusive, to use the contents for his own purposes
+
+This covers content the user saves on or prints from the provider's Internet
+site; nonpayment permits revocation. Paragraph (1) instead limits online
+retrieval/display to the contract term and restricts modification/publication,
+subject to express permission or site functionality. API JSON/CSV delivery is
+described in §2.1; business eligibility and acceptance remain conditions
+(§3.3–3.4).
+
+- **Private/internal retention:** affirmative time-unlimited own-use permission
+  exists for covered saved content; the earlier assessment omitted it.
+- **Public display/redistribution:** own-use permission is not that license;
+  §2.2 requires prior text-form approval for resale/third-party purposes.
+- **Termination/nonpayment:** covered saved-content rights have no stated time
+  limit, unlike online access. Ordinary cancellation is not equated here with
+  nonpayment, which expressly permits revocation. This is not an irrevocable grant.
+- **Normalized API history:** the terms do not expressly identify normalized
+  historical observations as covered saved content. Confirm API export coverage
+  and whether normalization is permitted despite paragraph (1)'s restrictions.
+
+**NEEDS CLARIFICATION, not approved:** the missing evidence is now the grant's
+application to our exact normalized-history use, rather than absence of any
+retention grant. Ask whether timestamped price/currency/stock records derived
+from API responses qualify, may be retained after an ordinary paid-up
+cancellation, and may be displayed privately versus publicly. Confirm this
+project's business eligibility and applicable contract. Currency and exact
+seller/listing continuity still require source-specific validation.
+
+**Revised comparison:** Price API now has stronger affirmative retention evidence
+than Rainforest or Keepa's reviewed material, and avoids PriceCharting's explicit
+subscription-end purge rule for covered content. It becomes the first policy
+clarification follow-up; Keepa remains the strongest technical follow-up. This
+is a research priority, not an approval or finding that normalized API history
+is already licensed. No candidate currently clears the complete gate.
 
 ### PriceCharting: BLOCKED under standard published API terms
 
@@ -988,7 +1012,9 @@ current applicable API agreement and written clarification before approval.
 
 ### Required evidence and narrow implementation boundary
 
-Next action: seek Keepa's applicable API agreement and resolve this exact question:
+Next action: resolve Price API's saved-content/API-normalization questions above
+first. Keepa remains an alternative requiring its applicable API agreement and
+an answer to this exact question:
 may an independent developer retain timestamped item/seller identity, currency,
 observed price and stock indefinitely as normalized PriceObservations, including
 after subscription termination, and display those retained observations in this
