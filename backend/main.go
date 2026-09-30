@@ -12,6 +12,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/leaf482/price-terminal/backend/ingestion"
 	"github.com/leaf482/price-terminal/backend/persistence"
 )
 
@@ -43,6 +44,9 @@ func newHandler(ping func(context.Context) error, products productStore, catalog
 	mux.HandleFunc("GET /products/{id}", api.get)
 	mux.HandleFunc("GET /products", api.list)
 	registerCatalogRoutes(mux, catalog)
+	if observations, ok := catalog.(ingestion.Store); ok {
+		mux.HandleFunc("POST /listings/{id}/observations", manualObservationHandler(observations))
+	}
 	if quality, ok := catalog.(qualityStore); ok {
 		registerQualityRoutes(mux, quality)
 	}
@@ -68,6 +72,10 @@ func main() {
 }
 
 func run() error {
+	address, err := listenAddress(os.Getenv("LISTEN_ADDR"))
+	if err != nil {
+		return err
+	}
 	db, err := openDatabase()
 	if err != nil {
 		return err
@@ -96,7 +104,7 @@ func run() error {
 	collectorDone := make(chan error, 1)
 	go func() { collectorDone <- runtime.Run(ctx) }()
 	server := &http.Server{
-		Addr:              "127.0.0.1:8080",
+		Addr:              address,
 		Handler:           newHandler(db.PingContext, store, store, currentAPI{store: store, status: runtime.Status, collect: runtime.Collect, maxAge: maxAge, now: time.Now}),
 		BaseContext:       func(net.Listener) context.Context { return ctx },
 		ReadHeaderTimeout: 5 * time.Second,

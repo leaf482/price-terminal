@@ -1,10 +1,86 @@
 # Product Price Tracker
 
 A general-purpose tracker for retailer listing prices, price history, promotions,
-and alerts. This repository currently contains a Go backend with liveness and
-database readiness checks, local PostgreSQL, and a minimal Next.js home page.
+and alerts. This repository contains a Go backend with liveness and
+database readiness checks, local PostgreSQL, and a Next.js catalog/detail UI.
 Catalog APIs, immutable observation persistence, an opt-in Fake collection runtime,
 and current-price APIs are available. No real retailer is collected yet.
+
+## Manual observations and deployment configuration (Task 26)
+
+`POST /listings/{id}/observations` accepts an immutable manual observation:
+
+```json
+{
+  "id": "manual-entry-unique-id",
+  "observed_at": "2026-09-30T12:00:00Z",
+  "source": "Receipt or listing URL and notes",
+  "stock": "in_stock",
+  "offer_price": { "minor_units": 1999, "currency": "USD" }
+}
+```
+
+Optional `msrp`, `retailer_list_price`, and `sale_price` use the same money object.
+MSRP requires `msrp_source` identifying an explicit manufacturer-price claim.
+Omit absent prices (or send null); a supplied money object requires explicit
+integer `minor_units` and USD/JPY currency. Zero is valid. All present currencies
+must agree; stock-only entries need no currency. Time requires RFC3339 with an
+explicit offset. The server prefixes source evidence with `manual: ` and uses
+the domain constructor and existing ingestion persistence/alert path. It never
+refreshes observation time or provider collection status. Alert evaluation failure
+is logged without undoing an accepted observation.
+
+Success returns 201 with `data.id` and `data.observation`; invalid input returns
+400, absent Listing 404, reused global observation ID 409, storage failure 500.
+Reuse the same ID after an uncertain response; check the observation audit/history
+on a conflict. A later independent entry needs a new ID. There is no update/delete.
+The UI retains its request ID after failure and reloads the complete detail page
+after success, refreshing current price, history, promotions, audit and alerts.
+This resets history selection to its default. Backdated entries appear in history;
+they do not replace a newer current observation.
+
+`LISTEN_ADDR` defaults to `127.0.0.1:8080`; an explicit value must be host:port
+with a numeric port from 1 through 65535. `BACKEND_URL` defaults to
+`http://127.0.0.1:8080` and must be an HTTP(S) origin without credentials, path,
+query, or fragment. Invalid values fail startup/config loading. PostgreSQL keeps
+the existing `PG*` configuration. Database connection remains lazy so `/healthz`
+works during an outage; `/readyz` verifies connectivity. No migrations run at startup.
+
+Supply `BACKEND_URL` identically to `npm run build` and `npm start`: Next.js rewrites
+are captured at build time while server reads use the process environment. Rebuild
+when changing that target. The browser uses the existing same-origin `/api` proxy;
+no database credentials or backend secrets belong in browser configuration.
+Load the root `.env` in both backend and frontend shells using the commands below.
+Empty `COLLECTOR_CONFIG` leaves provider collection disabled; manual entry works.
+Existing interval/timeout/max-age settings are listed in `.env.example`.
+
+This MVP has no authentication. Deploy only within a trusted access boundary;
+configurable binding does not make its write APIs suitable for unrestricted public
+access. Supply deployment secrets through the environment and choose PostgreSQL
+TLS settings appropriate to that environment. No cloud platform is required here.
+
+### Explicit manual demo
+
+1. Create `.env` from `.env.example` once, start Docker, and run
+   `docker compose up -d --wait postgres` from the repository root.
+2. Install the documented Goose version if needed and apply migrations:
+   `goose -env .env -dir backend/migrations -timeout 30s postgres "application_name=price_terminal_migrations connect_timeout=5" up`.
+3. Load `.env` using the Backend section's PowerShell/Bash command and run
+   `go run .` from `backend/`. In another shell load the same environment, then
+   run `npm ci` and `npm run dev` from `frontend/`. For production mode use
+   `npm run build` then `npm start` instead.
+4. Open `http://localhost:3000/catalog`. Create a Product, Retailer, then a
+   Listing referencing both with its source URL. Navigate to the Product detail.
+5. Open **Record price**. Enter source evidence, stock, USD and an offer such as
+   `19.99`; set an earlier observation timestamp with timezone. Repeat with a
+   later time and `17.99`, then inspect current price and the ALL history range.
+   Test blank prices for stock-only evidence or `0` for explicit free-price evidence.
+6. Optionally create an observed-price target alert before recording a qualifying
+   observation and inspect its triggered event. Promotion evidence remains a
+   separate optional form and does not alter ordinary observed-price alerts.
+
+Nothing is automatically seeded. Use clearly marked demo catalog entries and
+manual evidence; this flow does not imply a real provider collected the data.
 
 ## Repository layout
 

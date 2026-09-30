@@ -66,6 +66,12 @@ func (i *Ingestor) Ingest(ctx context.Context, resultID string, listing domain.L
 		slog.Warn("ingestion_failure", "listing_id", listing.ID, "observation_id", resultID, "stage", "validation")
 		return Collected{}, fmt.Errorf("ingest result: %w", err)
 	}
+	return i.Record(ctx, resultID, listing, observation)
+}
+
+// Record accepts already observed facts, including manual entries, without a
+// provider call. It uses the same validation, persistence and alert evaluation.
+func (i *Ingestor) Record(ctx context.Context, resultID string, listing domain.Listing, observation domain.PriceObservation) (Collected, error) {
 	collected := Collected{id: resultID, listing: listing, observation: observation}
 	return collected, i.Persist(ctx, collected)
 }

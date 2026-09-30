@@ -1,3 +1,4 @@
+import { backendURL } from './backend-url.ts';
 export type Currency = "USD" | "JPY";
 export type Product = {
     id: string;
@@ -135,7 +136,7 @@ export function parseHistory(x: unknown): History {
     return v as History;
 }
 export async function api<T>(path: string, parse: (x: unknown) => T, signal?: AbortSignal): Promise<T> {
-    const base = typeof window === "undefined" ? (process.env.BACKEND_URL || "http://127.0.0.1:8080") : "/api";
+    const base = typeof window === "undefined" ? backendURL(process.env.BACKEND_URL) : "/api";
     const response = await fetch(`${base}${path}`, { cache: "no-store", signal: signal || AbortSignal.timeout(10000) });
     if (!response.ok)
         throw new Error(`Request failed (${response.status}). Check the backend and database.`);

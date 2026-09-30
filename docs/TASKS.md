@@ -122,9 +122,9 @@ Acceptance: append reason/time invalidation records while retaining immutable ob
 
 Acceptance: check a small set of practical official/third-party APIs for access, stable listing prices/currency, and retained-history permission. Implement one narrow adapter and connect existing manual/scheduled collection only after the evidence clears that gate; otherwise stop after documentation. Fixture tests must remain independent of live access, and live verification must be reported honestly. The Task 25 decision in [provider research](PROVIDER_RESEARCH.md) is BLOCKED; no adapter is approved. Promotion collection remains deferred to a separately scoped task.
 
-### Task 26: Covered by Task 21
+### Task 26: Manual observation entry and deployment-ready MVP
 
-The narrow EffectivePrice calculation is included in Task 21; broader combinations require a separate reviewed task.
+Acceptance: record manual observations through the domain constructor and shared persistence/alert path; preserve absent versus zero prices, currency and MSRP evidence. Provide a simple detail-page form, refresh current/history/events, document an opt-in manual demo, and validate environment-based runtime configuration. No real provider, authentication, automatic seed, or cloud infrastructure. The former narrow EffectivePrice calculation task was covered by Task 21.
 
 ### Task 27: Covered by Task 21
 
