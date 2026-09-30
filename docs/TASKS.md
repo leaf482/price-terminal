@@ -104,33 +104,37 @@ Acceptance: run a bounded explicit set of active Listings on a configurable, non
 
 Acceptance: display API-backed products, current Listing prices, stock, freshness, and source links with loading, empty, and error states. Add bounded historical reads for 1D/1W/1M/3M/1Y/ALL, deterministic ordering, conservative historical-low/change metadata, and a selectable history chart that preserves missing points and currency distinctions. Verify backend unit/integration tests and frontend parsing, formatting, lint, and build. No real provider or create/edit forms.
 
-### Tasks 21–23: Combined into Task 20
+### Tasks 22–23: Combined into Task 20
 
 The user combined the planned frontend current-price view, historical API, and
-historical chart into Task 20. These IDs are retained as superseded references;
-subsequent task numbers and scope remain unchanged.
+historical chart into Task 20. IDs 22–23 remain superseded references. Task 21 now
+implements the combined promotion MVP below.
 
 ## Promotions, effective price, and MSRP
 
-### Task 24: Promotion evidence model and persistence
+### Task 21: Promotions and EffectivePrice MVP
 
-Acceptance: store listing applicability, provenance, validity, and supported conditions while preserving historical evidence. Keep coupon, cashback, and membership concepts distinct; test unknown conditions.
+Acceptance: append narrow fixed/percentage/cashback/membership promotion evidence with provenance, validity, and explicit unknown conditions; calculate explainable selected scenarios using exact arithmetic while separating payable and potential cashback/net. Add minimal evidence/scenario APIs and frontend display, with conditional/unavailable states, unit/integration tests, migration rollback/reapply, and frontend checks. No provider parsing, discovery, alerts, or generalized rules engine.
+
+### Task 24: Covered by Task 21
+
+Promotion evidence model and persistence are included in the combined Task 21.
 
 ### Task 25: Promotion collection for one provider
 
 Acceptance: normalize a narrow promotion type from fixtures into preserved evidence through ingestion. Unsupported or ambiguous terms do not become invented executable discounts.
 
-### Task 26: Effective-price calculation
+### Task 26: Covered by Task 21
 
-Acceptance: calculate a limited documented scenario from explicit observation/promotion inputs using exact arithmetic and tested rounding; separate checkout reductions from cashback and reject unsupported combinations.
+The narrow EffectivePrice calculation is included in Task 21; broader combinations require a separate reviewed task.
 
-### Task 27: Effective-price API and explanation
+### Task 27: Covered by Task 21
 
-Acceptance: expose derived results with input references, assumptions, exclusions, and conditional/unavailable states. Verify results remain distinct from observed prices.
+The selected-scenario API and explanation are included in Task 21.
 
-### Task 28: Promotion and effective-price display
+### Task 28: Covered by Task 21
 
-Acceptance: show applicable terms and calculation explanations without advertising conditional savings as universal. Verify unknown eligibility and potential cashback displays.
+The separate promotion and derived-result display is included in Task 21. Task 25 provider collection remains deferred; subsequent scope is unchanged.
 
 ### Task 29: MSRP provenance and comparisons
 

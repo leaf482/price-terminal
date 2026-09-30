@@ -192,8 +192,9 @@ The initial file, `backend/migrations/00001_migration_bootstrap.sql`, contains
 Its purpose is to prove the workflow. It creates no application objects.
 Goose owns `public.goose_db_version` and its supporting primary-key index and
 sequence. Migration 2 adds `products`, `retailers`, and `listings`. Migration 3
-adds `price_observations`; the latest version is 3. Rolling it back drops only
-the observation table and returns to version 2.
+adds `price_observations`. Migration 4 adds append-only `promotions` evidence;
+the latest version is 4. Rolling it back drops only the promotion table and returns
+to version 3, retaining observations and catalog data.
 Migration SQL and its version update run in one transaction by
 default. Do not edit applied migration files; add a new numbered file instead.
 
@@ -215,7 +216,7 @@ goose -env .env -dir backend/migrations -timeout 30s postgres "dbname=price_term
 Only the target database name is overridden; host, port, user, password, and TLS
 still come from the existing configuration. Repeat the same disposable-target
 command with `up`, `down`, then `up` to check no-op, rollback, and reapply.
-Use these read-only checks to inspect metadata and confirm four application tables:
+Use these read-only checks to inspect metadata and confirm five application tables:
 
 ```sh
 docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d price_terminal_migration_check -c "TABLE public.goose_db_version;"'
@@ -367,6 +368,84 @@ coupons, promotions, currency conversion, or EffectivePrice calculation. The
 example's failed Listing intentionally prevents a product-wide best-price claim.
 
 ## Frontend
+
+### Promotion evidence and derived scenarios
+
+Apply migration 4 before using promotion features. Evidence is appended with a
+unique caller-supplied `id`; retries return 409 rather than updating old evidence.
+There is no update/delete API or automatic promotion discovery. A new evidence
+snapshot gets a new ID. Records retain Listing FK, provenance, nanosecond timestamps,
+optional validity, kind/value, eligibility requirement, stacking state, and terms.
+Old snapshots are retained; do not select two snapshots of the same offer as two
+different discounts. No automatic offer matching or supersession is inferred.
+
+`POST /listings/{id}/promotions` accepts this body (example evidence only):
+
+```json
+{
+  "id": "coupon-evidence-1",
+  "source": "https://example.com/official-offer-terms",
+  "observed_at": "2026-09-29T12:00:00Z",
+  "starts_at": "2026-09-29T00:00:00Z",
+  "ends_at": "2026-10-01T00:00:00Z",
+  "kind": "fixed",
+  "amount": {"minor_units": 500, "currency": "USD"},
+  "requirement": "other",
+  "stacking": "unknown",
+  "terms": "Apply coupon SAVE5; confirm the source eligibility terms."
+}
+```
+
+Kinds are `fixed` (coupon/instant amount), `percentage`, `cashback` (fixed rebate),
+and `membership` (fixed immediate amount with `requirement: membership`). Monetary
+kinds require `amount`; percentages require `basis_points` from 1 to 10000 and
+omit `amount` (1250 means 12.50%). Terms must preserve coupon activation and any
+conditions. Requirements are `none`, `membership`, `other`, or `unknown`; stacking
+is `allowed`, `disallowed`, or `unknown`. Only record `none`/`allowed` when evidence
+supports them. Missing or invalid states are rejected, never silently defaulted.
+
+`GET /listings/{id}/promotions` returns up to 100 newest relevant evidence snapshots,
+with a `truncated` flag. Relevant means observed by request time and not explicitly
+expired; future-start offers remain visible. Start is inclusive; end is exclusive.
+Unknown bounds are preserved. No deduced "best promotion" or stacking occurs.
+
+An explicit scenario uses:
+
+```text
+GET /listings/{id}/effective-price?scenario=selected&promotion_id=coupon-evidence-1&member=unknown&eligible=yes
+```
+
+Repeat `promotion_id` to select a second record. At most one immediate discount
+and one cashback may be used; two immediate discounts or two cashbacks are unsupported.
+Both records must explicitly allow stacking when two are selected. `member` and
+`eligible` are caller assumptions (`yes`, `no`, `unknown`; omitted means unknown),
+not stored membership profiles. `eligible` confirms all other recorded conditions,
+including coupon activation. Unknown source requirements remain conditional even
+if the caller says yes. Membership also needs a yes membership assumption.
+
+The base is the latest coherent observed offer price, otherwise sale price. No
+reference-price fallback occurs. Percentage discount = base × basis points / 10000,
+rounded to the nearest minor unit with halves up using overflow-safe integer math.
+Discounts above the base, cashback above payable, currency mismatches, mismatched
+Listings, duplicate selections, future evidence, expired/not-yet-active offers,
+and unsupported combinations are unavailable. Valid discounts may yield zero.
+
+Results contain `status`, `reason`, rule version, full source observation, selected
+evidence, scenario assumptions, calculation time, base, immediate discount, immediate
+payable, potential cashback, potential net, and exclusions. Conditional/unavailable
+results withhold derived totals. Missing conditions do not become a confident estimate.
+HTTP 200 carries available/conditional/unavailable evaluations; malformed scenarios
+return 400, missing Listing/evidence 404, and internal failures generic 500 responses.
+Evidence creation returns 201, duplicate IDs 409, and invalid evidence 400.
+
+Cashback never reduces immediate payable. Tax/shipping are excluded. Selected
+discounts are assumed additional to the observed price; no live verification or
+freshness refresh occurs, and recorded validity bounds are not proof an offer is
+still available. The UI shows the observation time/stock and clearly labels derived
+scenario estimates and potential cashback as not guaranteed. Existing observed
+price, comparison, and history APIs remain unchanged.
+
+### Catalog and history
 
 The catalog at `/` displays up to 20 products by ID and their current comparable
 prices. Product detail pages show Listings, source links, stock, freshness, and
