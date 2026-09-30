@@ -32,6 +32,7 @@ func (s *Store) PriceHistory(ctx context.Context, id string, from *time.Time, to
  o.msrp,o.retailer_list_price,o.sale_price,o.offer_price,o.msrp_source
  FROM price_observations o JOIN listings l ON l.id=o.listing_id
  WHERE o.listing_id=$1 AND (o.observed_at,o.observed_at_ns_remainder)>=($2,$3)
+ AND NOT EXISTS (SELECT 1 FROM observation_invalidations i WHERE i.observation_id=o.result_id)
  AND (o.observed_at,o.observed_at_ns_remainder)<=($4,$5)
  ORDER BY o.observed_at DESC,o.observed_at_ns_remainder DESC,o.result_id COLLATE "C" DESC LIMIT $6`, id, lower.Truncate(time.Microsecond), lower.Nanosecond()%1000, to.Truncate(time.Microsecond), to.Nanosecond()%1000, MaxHistory+1)
 	if err != nil {

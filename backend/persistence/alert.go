@@ -123,11 +123,24 @@ func (s *Store) ListAlertEvents(ctx context.Context, listing string) ([]AlertEve
 // Earlier means (observed time, nanosecond remainder, bytewise result ID),
 // including deterministic equal-time ties. No promotion inputs are consulted.
 func (s *Store) EvaluateAlerts(ctx context.Context, resultID string) error {
-	tx, err := s.db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelRepeatableRead})
+	tx, err := s.db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelReadCommitted})
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
+	// Serialize against invalidation before taking comparison snapshots. At READ
+	// COMMITTED, a waiter sees invalidations committed by the preceding holder.
+	var listing string
+	if err = tx.QueryRowContext(ctx, `SELECT l.id FROM listings l JOIN price_observations o ON o.listing_id=l.id WHERE o.result_id=$1 FOR UPDATE OF l`, resultID).Scan(&listing); err != nil {
+		return err
+	}
+	var invalid bool
+	if err = tx.QueryRowContext(ctx, `SELECT EXISTS (SELECT 1 FROM observation_invalidations WHERE observation_id=$1)`, resultID).Scan(&invalid); err != nil {
+		return err
+	}
+	if invalid {
+		return nil
+	}
 	current, err := scanCurrent(tx.QueryRowContext(ctx, `SELECT l.id,l.product_id,l.retailer_id,l.url,l.retailer_product_id,o.observed_at,o.observed_at_ns_remainder,o.source,o.stock,o.currency,o.msrp,o.retailer_list_price,o.sale_price,o.offer_price,o.msrp_source FROM price_observations o JOIN listings l ON l.id=o.listing_id WHERE o.result_id=$1`, resultID))
 	if err != nil {
 		return err
@@ -162,7 +175,7 @@ func (s *Store) EvaluateAlerts(ctx context.Context, resultID string) error {
 		}
 		var prior *domain.Money
 		if a.Kind != "target" {
-			query := `SELECT COALESCE(offer_price,sale_price) FROM price_observations WHERE listing_id=$1 AND currency=$2 AND COALESCE(offer_price,sale_price) IS NOT NULL AND (NOT $3 OR stock='in_stock') AND (observed_at,observed_at_ns_remainder,result_id COLLATE "C")<($4,$5,$6 COLLATE "C")`
+			query := `SELECT COALESCE(offer_price,sale_price) FROM price_observations p WHERE listing_id=$1 AND currency=$2 AND COALESCE(offer_price,sale_price) IS NOT NULL AND NOT EXISTS (SELECT 1 FROM observation_invalidations i WHERE i.observation_id=p.result_id) AND (NOT $3 OR stock='in_stock') AND (observed_at,observed_at_ns_remainder,result_id COLLATE "C")<($4,$5,$6 COLLATE "C")`
 			if a.Kind == "drop" {
 				query += ` ORDER BY observed_at DESC,observed_at_ns_remainder DESC,result_id COLLATE "C" DESC LIMIT 1`
 			} else {

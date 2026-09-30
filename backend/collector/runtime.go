@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -23,11 +24,12 @@ type Target struct {
 // Status is operational, process-local state, never an observation. Restart
 // resets it. Error codes deliberately exclude provider/DB messages and secrets.
 type Status struct {
-	Active           bool       `json:"active"`
-	State            string     `json:"state"`
-	LastAttemptedAt  *time.Time `json:"last_attempted_at,omitempty"`
-	LastSuccessfulAt *time.Time `json:"last_successful_at,omitempty"`
-	Error            string     `json:"error,omitempty"`
+	Active              bool       `json:"active"`
+	State               string     `json:"state"`
+	LastAttemptedAt     *time.Time `json:"last_attempted_at,omitempty"`
+	LastSuccessfulAt    *time.Time `json:"last_successful_at,omitempty"`
+	Error               string     `json:"error,omitempty"`
+	ConsecutiveFailures uint64     `json:"consecutive_failures"`
 }
 
 type Runtime struct {
@@ -90,6 +92,7 @@ func (r *Runtime) start(id string) bool {
 	s.State = "collecting"
 	s.Error = ""
 	r.states[id] = s
+	slog.Info("collection_start", "listing_id", id)
 	return true
 }
 
@@ -135,13 +138,16 @@ func (r *Runtime) finish(id string, err error) {
 	if err != nil {
 		s.State = "failed"
 		s.Error = "collection_failed"
+		s.ConsecutiveFailures++
 	} else {
 		now := time.Now().UTC()
 		s.LastSuccessfulAt = &now
 		s.State = "success"
 		s.Error = ""
+		s.ConsecutiveFailures = 0
 	}
 	r.states[id] = s
+	slog.Info("collection_result", "listing_id", id, "state", s.State, "error_code", s.Error, "consecutive_failures", s.ConsecutiveFailures)
 }
 
 // Run collects immediately, then waits interval AFTER each completed cycle.

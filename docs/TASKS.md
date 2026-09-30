@@ -114,9 +114,9 @@ Acceptance: reuse catalog APIs for Product/Retailer/Listing creation and bounded
 
 Acceptance: append narrow fixed/percentage/cashback/membership promotion evidence with provenance, validity, and explicit unknown conditions; calculate explainable selected scenarios using exact arithmetic while separating payable and potential cashback/net. Add minimal evidence/scenario APIs and frontend display, with conditional/unavailable states, unit/integration tests, migration rollback/reapply, and frontend checks. No provider parsing, discovery, alerts, or generalized rules engine.
 
-### Task 24: Covered by Task 21
+### Task 24: Reliability, data quality, and backup/restore
 
-Promotion evidence model and persistence are included in the combined Task 21.
+Acceptance: append reason/time invalidation records while retaining immutable observation facts; exclude invalid observations from current/history/alert evaluation and expose bounded audit/invalidation controls. Preserve historical promotion/event evidence, add safe diagnostic logs and process-local failure counts, and verify Docker pg_dump/pg_restore against disposable seeded databases including Goose metadata. Review existing query/index shapes without speculative infrastructure. The former promotion-persistence task was covered by Task 21.
 
 ### Task 25: Promotion collection for one provider
 
@@ -164,19 +164,19 @@ Acceptance: refine backoff and source-specific rate behavior using actual provid
 
 ### Task 37: Operational visibility
 
-Acceptance: expose enough collection/alert-evaluation outcomes and timing information to diagnose failed or stale listings; document a small health-check procedure and verify logs omit secrets.
+Initial scope covered by Task 24: collection/alert-evaluation outcomes, timing and failure diagnostics, a health-check procedure, and safe logs. Broader monitoring requires a separate task.
 
 ### Task 38: Data-quality handling
 
-Acceptance: add a minimal way to identify invalid accepted observations without modifying original facts, and define query/alert treatment. Verify traceability and historical promotion/calculation references remain intact.
+Covered by Task 24: invalidation without modifying original facts, explicit query/alert treatment, and retained historical evidence.
 
 ### Task 39: Backup and restore verification
 
-Acceptance: document and exercise database backup/restore on disposable data; verify products, listings, observations, and operational state needed for safe restart survive.
+Covered by Task 24: verify durable application and Goose state using disposable backup/restore. Process-local collection diagnostics intentionally reset on restart.
 
 ### Task 40: Query and retention review
 
-Acceptance: measure representative current/history queries, address demonstrated bottlenecks with small changes, and document retention assumptions. Do not delete historical data or add new infrastructure without an explicit reviewed decision.
+Task 24 reviews representative query/index shapes; larger-data measurement remains deferred until a demonstrated need. Do not delete historical data or add new infrastructure without an explicit reviewed decision.
 
 ## Later product matching
 

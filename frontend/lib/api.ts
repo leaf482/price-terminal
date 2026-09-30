@@ -32,6 +32,7 @@ export type Current = {
         last_attempted_at?: string;
         last_successful_at?: string;
         error?: string;
+        consecutive_failures?: number;
     };
 };
 export type Prices = {

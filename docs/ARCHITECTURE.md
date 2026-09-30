@@ -71,6 +71,10 @@ Use integer minor units and explicit currency throughout database, Go, and API r
 
 Use relational constraints and migrations for stable identities and relationships. Observations are append-only in normal application behavior. Use transactions where partial writes would create misleading data. Add indexes based on the initial query shapes, especially listing history and current-price retrieval.
 
+Observation invalidation is a separate append-only record with reason/time; it never changes original facts. Current prices, public history, and subsequent alert evaluation exclude invalidated observations. A bounded audit API retains visibility of all original facts and invalidation metadata. Invalidation and alert evaluation serialize on the Listing row so evaluation cannot consume an invalidation already committed for that Listing. Existing alert events and promotion evidence are never rewritten; historical decisions may reference subsequently invalidated facts. See [RELIABILITY.md](RELIABILITY.md).
+
+Collection attempt/success/error status and consecutive failure counts are process-local diagnostics and reset on restart. They are not persisted or restorable from a database dump. PostgreSQL backups preserve all durable catalog, observation, promotion, alert/event, invalidation, and Goose state using standard pg_dump/pg_restore; recovery is verified in separate disposable databases.
+
 Keep APIs narrow and bounded: product/listing operations, current known prices, then historical ranges and alert operations. Define pagination, validation, error responses, and freshness semantics as each API is built. Do not choose a broad API framework or protocol solely for hypothetical future clients.
 
 Store only source evidence needed for traceability; retaining every raw page is not an initial requirement. Avoid secrets and personal information in logs or evidence. Configure credentials outside tracked files. Access controls and public deployment requirements must be settled before exposing writable or user-specific APIs publicly.

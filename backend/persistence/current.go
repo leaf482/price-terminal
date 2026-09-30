@@ -26,7 +26,8 @@ const currentSelect = `SELECT l.id,l.product_id,l.retailer_id,l.url,l.retailer_p
  o.observed_at,o.observed_at_ns_remainder,o.source,o.stock,o.currency,
  o.msrp,o.retailer_list_price,o.sale_price,o.offer_price,o.msrp_source
  FROM listings l LEFT JOIN LATERAL (
- SELECT * FROM price_observations WHERE listing_id=l.id
+ SELECT * FROM price_observations p WHERE listing_id=l.id
+ AND NOT EXISTS (SELECT 1 FROM observation_invalidations i WHERE i.observation_id=p.result_id)
  ORDER BY observed_at DESC,observed_at_ns_remainder DESC,result_id COLLATE "C" DESC LIMIT 1
  ) o ON true `
 

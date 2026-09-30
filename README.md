@@ -193,9 +193,10 @@ Its purpose is to prove the workflow. It creates no application objects.
 Goose owns `public.goose_db_version` and its supporting primary-key index and
 sequence. Migration 2 adds `products`, `retailers`, and `listings`. Migration 3
 adds `price_observations`. Migration 4 adds append-only `promotions` evidence.
-Migration 5 adds `price_alerts` and `price_alert_events`; the latest version is 5.
-Rolling it back drops only alerts/events and returns to version 4, retaining
-promotions, observations, and catalog data.
+Migration 5 adds `price_alerts` and `price_alert_events`. Migration 6 adds
+`observation_invalidations` and a Product-to-Listing index; the latest version is 6.
+Rolling it back drops that table/index and returns to version 5. Do not roll back migration 6 on
+real data casually: previously excluded observations would become visible again.
 Migration SQL and its version update run in one transaction by
 default. Do not edit applied migration files; add a new numbered file instead.
 
@@ -217,7 +218,7 @@ goose -env .env -dir backend/migrations -timeout 30s postgres "dbname=price_term
 Only the target database name is overridden; host, port, user, password, and TLS
 still come from the existing configuration. Repeat the same disposable-target
 command with `up`, `down`, then `up` to check no-op, rollback, and reapply.
-Use these read-only checks to inspect metadata and confirm seven application tables:
+Use these read-only checks to inspect metadata and confirm eight application tables:
 
 ```sh
 docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d price_terminal_migration_check -c "TABLE public.goose_db_version;"'
@@ -433,6 +434,9 @@ retry evaluation, so a failure can leave an observation without alert events.
 There are no delivery attempts, email, SMS, push, webhooks, or notification queues.
 
 ## Frontend
+
+For observation invalidation, operational diagnostics, and Docker backup/restore,
+see [Reliability and recovery](docs/RELIABILITY.md).
 
 Open **Manage catalog** (`/catalog`) to create Products, Retailers, and linked
 Listings using the existing catalog APIs. Product/Retailer suggestions and browse

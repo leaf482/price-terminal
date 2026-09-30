@@ -13,3 +13,7 @@ npm-debug.log*
 # Local Go build output
 /backend/backend
 /backend/backend.exe
+
+# Local PostgreSQL backup artifacts
+/backups/
+*.dump

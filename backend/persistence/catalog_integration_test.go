@@ -59,12 +59,12 @@ func freshDatabase(t *testing.T, ctx context.Context) *sql.DB {
 		t.Logf("goose %s: %s", action, output)
 		if action == "down" {
 			var alertTablesAbsent, catalogTablePresent bool
-			if err := db.QueryRowContext(ctx, `SELECT to_regclass('public.price_alerts') IS NULL AND to_regclass('public.price_alert_events') IS NULL,
-				to_regclass('public.price_observations') IS NOT NULL AND to_regclass('public.promotions') IS NOT NULL`).Scan(&alertTablesAbsent, &catalogTablePresent); err != nil {
+			if err := db.QueryRowContext(ctx, `SELECT to_regclass('public.observation_invalidations') IS NULL AND to_regclass('public.listings_product_id_idx') IS NULL,
+				to_regclass('public.price_alert_events') IS NOT NULL AND to_regclass('public.price_observations') IS NOT NULL`).Scan(&alertTablesAbsent, &catalogTablePresent); err != nil {
 				t.Fatal(err)
 			}
 			if !alertTablesAbsent || !catalogTablePresent {
-				t.Fatal("migration 5 rollback must remove alerts/events and retain promotions/observations")
+				t.Fatal("migration 6 rollback must remove invalidations and retain events/observations")
 			}
 		}
 	}
@@ -93,7 +93,7 @@ func TestCatalogIntegration(t *testing.T) {
 		if err := rows.Err(); err != nil {
 			t.Fatal(err)
 		}
-		want := []string{"goose_db_version", "listings", "price_alert_events", "price_alerts", "price_observations", "products", "promotions", "retailers"}
+		want := []string{"goose_db_version", "listings", "observation_invalidations", "price_alert_events", "price_alerts", "price_observations", "products", "promotions", "retailers"}
 		if !reflect.DeepEqual(tables, want) {
 			t.Fatalf("tables = %v, want %v", tables, want)
 		}
@@ -102,8 +102,12 @@ func TestCatalogIntegration(t *testing.T) {
 		if err := db.QueryRowContext(ctx, `SELECT version_id FROM goose_db_version WHERE is_applied ORDER BY id DESC LIMIT 1`).Scan(&version); err != nil {
 			t.Fatal(err)
 		}
-		if version != 5 {
-			t.Fatalf("version = %d, want 5", version)
+		if version != 6 {
+			t.Fatalf("version = %d, want 6", version)
+		}
+		var indexPresent bool
+		if err := db.QueryRowContext(ctx, `SELECT to_regclass('public.listings_product_id_idx') IS NOT NULL`).Scan(&indexPresent); err != nil || !indexPresent {
+			t.Fatal("product/listing index missing", err)
 		}
 	})
 

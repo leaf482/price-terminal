@@ -9,7 +9,7 @@ export default function CollectionControls({ id, status }: {
 }) {
     const router = useRouter(), pending = useRef(false);
     const [busy, setBusy] = useState(false), [message, setMessage] = useState(''), [error, setError] = useState('');
-    return <section><h4>Collection status</h4><p>Status: {status.state} {status.error && `(${status.error})`}</p><p>Last attempted: {status.last_attempted_at || 'Never'}</p><p>Last successful: {status.last_successful_at || 'Never'}</p><p>Process-local status resets when the backend restarts. Observation time above is source time, not the latest collection attempt.</p>
+    return <section><h4>Collection status</h4><p>Consecutive failed attempts: {status.consecutive_failures ?? 0} (resets on success or restart)</p><p>Status: {status.state} {status.error && `(${status.error})`}</p><p>Last attempted: {status.last_attempted_at || 'Never'}</p><p>Last successful: {status.last_successful_at || 'Never'}</p><p>Process-local status resets when the backend restarts. Observation time above is source time, not the latest collection attempt.</p>
  {status.state === 'inactive' && <p>No provider configured. Creating a Listing does not enable collection; the backend COLLECTOR_CONFIG must include it (currently Fake fixtures only).</p>}
  <button disabled={busy || status.state === 'collecting' || status.state === 'inactive'} onClick={async () => { if (pending.current)
         return; pending.current = true; setBusy(true); setMessage(''); setError(''); try {

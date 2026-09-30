@@ -7,7 +7,7 @@ package ingestion
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"strings"
 
 	"github.com/leaf482/price-terminal/backend/domain"
@@ -59,9 +59,11 @@ func (i *Ingestor) Ingest(ctx context.Context, resultID string, listing domain.L
 	}
 	observation, err := i.provider.Collect(ctx, listing)
 	if err != nil {
+		slog.Warn("ingestion_failure", "listing_id", listing.ID, "observation_id", resultID, "stage", "provider")
 		return Collected{}, fmt.Errorf("ingest collect: %w", err)
 	}
 	if err := provider.ValidateResult(listing, observation); err != nil {
+		slog.Warn("ingestion_failure", "listing_id", listing.ID, "observation_id", resultID, "stage", "validation")
 		return Collected{}, fmt.Errorf("ingest result: %w", err)
 	}
 	collected := Collected{id: resultID, listing: listing, observation: observation}
@@ -95,6 +97,7 @@ func (i *Ingestor) Persist(ctx context.Context, collected Collected) error {
 		return fmt.Errorf("ingest persist: %w", err)
 	}
 	if err := i.store.InsertPriceObservation(ctx, collected.id, collected.observation); err != nil {
+		slog.Warn("ingestion_failure", "listing_id", collected.listing.ID, "observation_id", collected.id, "stage", "persistence")
 		return fmt.Errorf("ingest persist: %w", err)
 	}
 	// Alert evaluation is downstream of the committed observation. Its failure
@@ -103,7 +106,7 @@ func (i *Ingestor) Persist(ctx context.Context, collected Collected) error {
 		EvaluateAlerts(context.Context, string) error
 	}); ok {
 		if err := evaluator.EvaluateAlerts(ctx, collected.id); err != nil {
-			log.Printf("alert evaluation failed for persisted observation %q", collected.id)
+			slog.Warn("alert_evaluation_failure", "listing_id", collected.listing.ID, "observation_id", collected.id)
 		}
 	}
 	return nil
