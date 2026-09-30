@@ -62,6 +62,7 @@ type dashboardStub struct {
 	err, priceErr, alertErr error
 	limit, calls            int
 	ids                     []string
+	priceIDs                []string
 	since, until            time.Time
 }
 
@@ -69,8 +70,9 @@ func (s *dashboardStub) ListProducts(_ context.Context, limit int) ([]domain.Pro
 	s.limit = limit
 	return s.products, s.err
 }
-func (s *dashboardStub) CurrentProduct(context.Context, string) ([]persistence.CurrentListing, error) {
+func (s *dashboardStub) CurrentProducts(_ context.Context, ids []string) (map[string][]persistence.CurrentListing, error) {
 	s.calls++
+	s.priceIDs = append([]string{}, ids...)
 	return nil, s.priceErr
 }
 func (s *dashboardStub) ProductsWithRecentAlerts(_ context.Context, ids []string, since, until time.Time) (map[string]bool, error) {
@@ -116,7 +118,7 @@ func TestDashboardEndpoint(t *testing.T) {
 			if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
 				t.Fatal(err)
 			}
-			if s.limit != 21 || s.calls > 20 || len(s.ids) > 20 || len(response.Data.Products) != min(tc.n, 20) || response.Data.Truncated != (tc.n > 20) {
+			if s.limit != 21 || s.calls != 1 || len(s.priceIDs) != min(tc.n, 20) || len(s.ids) > 20 || len(response.Data.Products) != min(tc.n, 20) || response.Data.Truncated != (tc.n > 20) {
 				t.Fatal("bound", s, response)
 			}
 			if !s.since.Equal(now.Add(-7*24*time.Hour)) || !s.until.Equal(now) {

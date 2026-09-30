@@ -11,11 +11,11 @@ import (
 	"github.com/leaf482/price-terminal/backend/persistence"
 )
 
-const dashboardLimit = 20
+const dashboardLimit = persistence.MaxDashboardProducts
 
 type dashboardStore interface {
 	ListProducts(context.Context, int) ([]domain.Product, error)
-	CurrentProduct(context.Context, string) ([]persistence.CurrentListing, error)
+	CurrentProducts(context.Context, []string) (map[string][]persistence.CurrentListing, error)
 	ProductsWithRecentAlerts(context.Context, []string, time.Time, time.Time) (map[string]bool, error)
 }
 
@@ -89,18 +89,18 @@ func dashboardHandler(store dashboardStore, api currentAPI) http.HandlerFunc {
 			productError(w, 500, "internal_error", "unable to load dashboard alerts")
 			return
 		}
+		values, err := store.CurrentProducts(ctx, ids)
+		if err != nil {
+			if errors.Is(err, persistence.ErrTooManyListings) {
+				productError(w, 422, "too_many_listings", "dashboard supports at most 100 listings per product")
+			} else {
+				productError(w, 500, "internal_error", "unable to load dashboard prices")
+			}
+			return
+		}
 		data := make([]dashboardProduct, 0, len(products))
 		for _, p := range products {
-			values, err := store.CurrentProduct(ctx, p.ID)
-			if err != nil {
-				if errors.Is(err, persistence.ErrTooManyListings) {
-					productError(w, 422, "too_many_listings", "dashboard supports at most 100 listings per product")
-				} else {
-					productError(w, 500, "internal_error", "unable to load dashboard prices")
-				}
-				return
-			}
-			summary := summarizeProduct(p, values, api.status, now, api.maxAge)
+			summary := summarizeProduct(p, values[p.ID], api.status, now, api.maxAge)
 			summary.RecentAlert = alerts[p.ID]
 			data = append(data, summary)
 		}
