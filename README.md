@@ -33,6 +33,34 @@ cycle or manual refresh. In Go, `Listing.TrackingDisabled` defaults to false and
 `TrackingEnabled()` exposes its positive meaning; the database/API use the
 positive `tracking_enabled` boolean.
 
+### Observation audit CSV export (Task 30)
+
+Use **Export CSV** on a Listing in Product detail, or
+`GET /listings/{id}/observations/export`. The download is UTF-8 `text/csv`, named
+`listing-observations.csv`, with this ordered header:
+
+```csv
+observation_id,observed_at,source,currency,offer_price_minor,sale_price_minor,list_price_minor,msrp_minor,msrp_source,stock,valid,invalidated_at,invalidation_reason
+```
+
+This read-only audit export includes **invalidated observations**, unlike normal
+price history. Original facts and provenance are unchanged; `valid=false` includes
+the invalidation time/reason, while valid rows leave those fields blank. Missing
+money/currency remains blank, explicit zero is `0`, and stock-only rows are kept.
+Timestamps represent stored instants in UTC RFC3339 with nanosecond precision
+where present. Original timestamp text in CSV-import provenance is retained.
+Rows sort chronologically by observation timestamp (including nanoseconds), then
+by observation ID in bytewise ascending order. Commas, quotes and newlines in
+text are CSV-escaped without changing the text. Treat metadata as text when
+opening it in spreadsheet software; it is not rewritten as spreadsheet formulas
+or escaped with additional apostrophes.
+
+The maximum is **10,000 observations per Listing**, including invalidated rows.
+An oversized Listing returns HTTP 422 `export_limit` with no partial CSV. An empty
+Listing exports the header alone; a missing Listing returns 404. This audit format
+is intentionally distinct from the narrow import format below: it is not a
+round-trip restore/import interface and does not export promotions or alerts.
+
 ### CSV observation import (Task 29)
 
 Product detail includes **Import CSV observations** for each Listing. Select a
