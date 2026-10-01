@@ -8,6 +8,7 @@ import React from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import * as comparison from './comparison.ts';
 import * as prices from './prices.ts';
+import {parseRetailers} from './catalog.ts';
 
 const make=(id,currency,amount,time='2026-10-01T00:00:00Z')=>({listing:{id,product_id:'p',retailer_id:id,url:'https://example.com/'+id,tracking_enabled:true},observation:amount===null?null:{observed_at:time,source:'fixture',stock:'in_stock',currency,offer_price:amount},freshness:'fresh',collection:{state:'inactive'}});
 const zero=make('a','USD',0), usd=make('b','USD',100), jpy=make('c','JPY',200), missing=make('d',null,null);
@@ -26,14 +27,39 @@ test('newest sort handles nanoseconds, offsets, ties, stock-only and missing obs
  assert.deepEqual(comparison.sortListings([missing,early,late,stock],'newest',names).map(r=>r.listing.id),['s','f','e','d']);
  assert.deepEqual(comparison.sortListings([usd,zero],'newest',names).map(r=>r.listing.id),['a','b']);
 });
-function load(){
+function load(retailerNames=names){
  const states=[];let index=0;
  const exports={},require=createRequire(import.meta.url),hooks={...React,useState(v){const i=index++;if(!(i in states))states[i]=v;return[states[i],v=>states[i]=v]}};
  const code=ts.transpileModule(readFileSync(new URL('../app/products/[id]/listing-comparison.tsx',import.meta.url),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX,target:ts.ScriptTarget.ES2022}}).outputText;
  runInNewContext(code,{exports,require(name){if(name==='react')return hooks;if(name.endsWith('/comparison'))return comparison;if(name.endsWith('/prices'))return prices;if(name.startsWith('./'))return{default:({listingID,id})=>React.createElement('span',{'data-control':name},listingID||id)};return require(name)}});
- return data=>{index=0;return exports.default({prices:data,retailers:names,revision:'revision'})};
+ return data=>{index=0;return exports.default({prices:data,retailers:retailerNames,revision:'revision'})};
 }
 function nodes(e){if(!e||typeof e!=='object')return[];if(Array.isArray(e))return e.flatMap(nodes);return[e,...nodes(e.props?.children)]}
+
+test('prototype-named Retailers outside the initial batch are fetched, rendered and sorted as string data',async()=>{
+ for(const id of ['constructor','__proto__','toString','normal-outside']){
+  const rows=[make(id,'USD',100),zero],data={product_id:'p',listings:rows,best_price:null,comparison_status:'not_fresh'};
+  const batch=[{id:'a',name:'Zulu shop'},...Array.from({length:99},(_,i)=>({id:`other-${i}`,name:`Other ${i}`}))];
+  const calls=[],exports={},require=createRequire(import.meta.url);
+  const component=()=>null;
+  const code=ts.transpileModule(readFileSync(new URL('../app/products/[id]/page.tsx',import.meta.url),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX,target:ts.ScriptTarget.ES2022}}).outputText;
+  runInNewContext(code,{exports,require(name){
+   if(name==='../../../lib/catalog')return{parseRetailers};
+   if(name==='../../../lib/api')return{parseProduct:x=>x,parsePrices:x=>x,api:async(path,parse)=>{calls.push(path);const value=path==='/products/p'?{id:'p',name:'Product',brand:'',model:''}:path==='/products/p/prices'?data:path==='/retailers?limit=100'?batch:path===`/retailers/${id}`?{id,name:'Alpha real shop'}:assert.fail(`Unexpected request ${path}`);return parse(value)}};
+   if(name==='next/link'||name.startsWith('./')||name.startsWith('../../catalog/'))return{default:component};return require(name);
+  }});
+  const tree=await exports.default({params:Promise.resolve({id:'p'})});
+  const props=nodes(tree).find(n=>n.props?.retailers)?.props;
+  assert.ok(props);assert.equal(calls.filter(p=>p===`/retailers/${id}`).length,1);assert.ok(!calls.includes('/retailers/a'));
+  assert.ok(Object.hasOwn(props.retailers,id));assert.equal(typeof props.retailers[id],'string');assert.equal(props.retailers[id],'Alpha real shop');
+  const render=load(props.retailers);let comparisonTree=render(data);
+  assert.match(renderToStaticMarkup(comparisonTree),/<h3>Alpha real shop<\/h3>/);
+  assert.match(renderToStaticMarkup(comparisonTree),/<h3>Zulu shop<\/h3>/);
+  nodes(comparisonTree).find(n=>n.type==='select').props.onChange({target:{value:'retailer'}});
+  comparisonTree=render(data);assert.deepEqual(nodes(comparisonTree).filter(n=>n.type==='article').map(n=>n.props.id),[id,'a']);
+ }
+ assert.throws(()=>parseRetailers([{id:'constructor',name:()=>{}}]),/Invalid catalog record/);
+});
 test('comparison cards retain status, best-price contract, promotion separation and all controls while sorting',()=>{
  const rows=[{...usd,freshness:'stale',collection:{state:'failed'},observation:{...usd.observation,stock:'out_of_stock'}},{...zero,listing:{...zero.listing,tracking_enabled:false}},missing,jpy];
  const data={product_id:'p',listings:rows,best_price:null,comparison_status:'incompatible_currencies'},render=load();
