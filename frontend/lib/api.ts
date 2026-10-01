@@ -1,6 +1,7 @@
 import { backendURL } from './backend-url.ts';
 export type Currency = "USD" | "JPY";
 export type Product = {
+    archived?: boolean;
     id: string;
     name: string;
     brand: string;
@@ -94,7 +95,7 @@ export function parseObservation(x: unknown): Observation {
     return v as Observation;
 }
 export function parseProduct(x: unknown): Product { const v = object(x); for (const key of ["id", "name", "brand", "model"])
-    text(v[key]); return v as Product; }
+    text(v[key]); if (v.archived !== undefined && typeof v.archived !== 'boolean') throw new Error('Invalid archive state'); return v as Product; }
 export function parseProducts(x: unknown): Product[] { if (!Array.isArray(x))
     throw new Error("Invalid product list"); return x.map(parseProduct); }
 export function parsePrices(x: unknown): Prices {

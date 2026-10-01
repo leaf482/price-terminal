@@ -14,7 +14,7 @@ import (
 const dashboardLimit = persistence.MaxDashboardProducts
 
 type dashboardStore interface {
-	ListProducts(context.Context, int) ([]domain.Product, error)
+	ListDashboardProducts(context.Context, int, bool) ([]domain.Product, error)
 	CurrentProducts(context.Context, []string) (map[string][]persistence.CurrentListing, error)
 	ProductsWithRecentAlerts(context.Context, []string, time.Time, time.Time) (map[string]bool, error)
 }
@@ -70,7 +70,13 @@ func dashboardHandler(store dashboardStore, api currentAPI) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 		defer cancel()
-		products, err := store.ListProducts(ctx, dashboardLimit+1)
+		query := r.URL.Query()["include_archived"]
+		if len(query) > 1 || (len(query) == 1 && query[0] != "true" && query[0] != "false") {
+			productError(w, 400, "invalid_archive_filter", "include_archived must be true or false")
+			return
+		}
+		includeArchived := len(query) == 1 && query[0] == "true"
+		products, err := store.ListDashboardProducts(ctx, dashboardLimit+1, includeArchived)
 		if err != nil {
 			productError(w, 500, "internal_error", "unable to load dashboard")
 			return

@@ -33,6 +33,21 @@ cycle or manual refresh. In Go, `Listing.TrackingDisabled` defaults to false and
 `TrackingEnabled()` exposes its positive meaning; the database/API use the
 positive `tracking_enabled` boolean.
 
+### Product archive state (Task 32)
+
+Product detail supports Archive/Unarchive using
+`PATCH /products/{id}/archive` with `{"archived":true}` or `false`.
+Existing/new Products default active. The dashboard excludes archived Products
+before its row limit; **Show archived** requests `/dashboard?include_archived=true`
+and includes them with an Archived label. Search and filters still apply to the
+bounded loaded set. Direct Product detail and catalog reads include archived
+Products. Metadata edits preserve archive state.
+
+Archiving only changes dashboard visibility. It does **not** disable Listings:
+collection remains controlled by each Listing's tracking-enabled state. Listing
+identities, tracking states, observations/history, promotions and alerts/events
+are retained and remain accessible. Unarchive restores default visibility.
+
 ### Catalog metadata editing (Task 31)
 
 Product detail offers **Edit Product metadata**; catalog management offers
@@ -383,7 +398,8 @@ sequence. Migration 2 adds `products`, `retailers`, and `listings`. Migration 3
 adds `price_observations`. Migration 4 adds append-only `promotions` evidence.
 Migration 5 adds `price_alerts` and `price_alert_events`. Migration 6 adds
 `observation_invalidations` and a Product-to-Listing index. Migration 7 adds
-`listings.tracking_enabled`, defaulting existing and new Listings to true; the latest version is 7.
+`listings.tracking_enabled`, defaulting existing and new Listings to true. Migration 8 adds `products.archived` with default false; the latest version is 8.
+Rolling migration 8 back removes only archive state; reapplying defaults Products to active.
 Rolling migration 7 back drops only tracking state and returns to version 6 (reapply defaults tracking to enabled). Rolling migration 6 back drops the invalidation table/index and returns to version 5. Do not roll back migration 6 on
 real data casually: previously excluded observations would become visible again.
 Migration SQL and its version update run in one transaction by

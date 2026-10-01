@@ -20,8 +20,8 @@ func (s *Store) InsertProduct(ctx context.Context, product domain.Product) error
 	if err := product.Validate(); err != nil {
 		return fmt.Errorf("insert product: %w", err)
 	}
-	_, err := s.db.ExecContext(ctx, `INSERT INTO products (id, name, brand, model) VALUES ($1, $2, $3, $4)`,
-		product.ID, product.Name, product.Brand, product.Model)
+	_, err := s.db.ExecContext(ctx, `INSERT INTO products (id, name, brand, model, archived) VALUES ($1, $2, $3, $4, $5)`,
+		product.ID, product.Name, product.Brand, product.Model, product.Archived)
 	if err != nil {
 		return fmt.Errorf("insert product: %w", err)
 	}
@@ -30,8 +30,8 @@ func (s *Store) InsertProduct(ctx context.Context, product domain.Product) error
 
 func (s *Store) GetProduct(ctx context.Context, id string) (domain.Product, error) {
 	var product domain.Product
-	err := s.db.QueryRowContext(ctx, `SELECT id, name, brand, model FROM products WHERE id = $1`, id).
-		Scan(&product.ID, &product.Name, &product.Brand, &product.Model)
+	err := s.db.QueryRowContext(ctx, `SELECT id, name, brand, model, archived FROM products WHERE id = $1`, id).
+		Scan(&product.ID, &product.Name, &product.Brand, &product.Model, &product.Archived)
 	if err != nil {
 		return domain.Product{}, fmt.Errorf("get product: %w", err)
 	}
@@ -46,10 +46,13 @@ const MaxProductListLimit = 100
 // ListProducts returns at most limit products in stable primary-key order.
 // Callers must explicitly select a bound; zero never means an unbounded query.
 func (s *Store) ListProducts(ctx context.Context, limit int) ([]domain.Product, error) {
+	return s.listProducts(ctx, limit, true)
+}
+func (s *Store) listProducts(ctx context.Context, limit int, includeArchived bool) ([]domain.Product, error) {
 	if limit < 1 || limit > MaxProductListLimit {
 		return nil, fmt.Errorf("list products: limit must be between 1 and %d", MaxProductListLimit)
 	}
-	rows, err := s.db.QueryContext(ctx, `SELECT id, name, brand, model FROM products ORDER BY id LIMIT $1`, limit)
+	rows, err := s.db.QueryContext(ctx, `SELECT id, name, brand, model, archived FROM products WHERE ($2 OR NOT archived) ORDER BY id LIMIT $1`, limit, includeArchived)
 	if err != nil {
 		return nil, fmt.Errorf("list products: %w", err)
 	}
@@ -57,7 +60,7 @@ func (s *Store) ListProducts(ctx context.Context, limit int) ([]domain.Product, 
 	products := make([]domain.Product, 0)
 	for rows.Next() {
 		var p domain.Product
-		if err := rows.Scan(&p.ID, &p.Name, &p.Brand, &p.Model); err != nil {
+		if err := rows.Scan(&p.ID, &p.Name, &p.Brand, &p.Model, &p.Archived); err != nil {
 			return nil, fmt.Errorf("list products: %w", err)
 		}
 		if err := p.Validate(); err != nil {

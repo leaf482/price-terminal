@@ -10,10 +10,11 @@ import (
 // Product identifies a retailer-independent item or variant. Descriptive fields
 // are optional; no retailer URL, price, or availability belongs here.
 type Product struct {
-	ID    string
-	Name  string
-	Brand string
-	Model string
+	Archived bool
+	ID       string
+	Name     string
+	Brand    string
+	Model    string
 }
 
 func (p Product) Validate() error {

@@ -47,7 +47,7 @@ test('dashboard controls apply search/filter and explain empty/bounded states',(
  nodes(tree).find(n=>n.type==='select').props.onChange({target:{value:'alert'}});
  assert.match(renderToStaticMarkup(h.render()),/No products match/);
  assert.match(renderToStaticMarkup(h.render()),/Search and filters apply only to these loaded products/);
- assert.match(renderToStaticMarkup(load().exports.default({data:{...data,products:[]}})),/No products yet/);
+ assert.match(renderToStaticMarkup(load().exports.default({data:{...data,products:[]}})),/No active products/);
 });
 
 test('dashboard parser rejects malformed summaries and preserves explicit zero',()=>{
@@ -55,11 +55,23 @@ test('dashboard parser rejects malformed summaries and preserves explicit zero',
  for(const row of [{...zero,best_price:{...zero.best_price,minor_units:NaN}},{...zero,comparison_status:'incompatible_currencies'},{...zero,latest_observation_at:'bad'},{...zero,has_collection_error:'false'}])assert.throws(()=>dashboard.parseDashboard({...data,products:[row]}));
 });
 
+test('archived dashboard data remains searchable with unchanged summaries and filters',async()=>{
+ const row={...zero,product:{...zero.product,archived:true}};
+ for(const filter of ['all','priced','error','alert'])assert.deepEqual(dashboard.filterProducts([row],'Acme',filter),[row]);
+ assert.deepEqual(dashboard.filterProducts([row],'Acme','missing'),[]);
+ const h=load();assert.match(renderToStaticMarkup(h.exports.ProductCard({row})),/Archived/);
+ assert.match(renderToStaticMarkup(h.exports.ProductCard({row})),/2 Listings/);
+ assert.match(renderToStaticMarkup(h.exports.default({data,includeArchived:true})),/Hide archived/);
+ assert.match(renderToStaticMarkup(load().render()),/Show archived/);
+ const home=load('../app/page.tsx',{'../lib/api':{api:async(path,parse)=>{assert.equal(path,'/dashboard?include_archived=true');return parse({...data,products:[row]})}},'./dashboard':{default:()=>null}});
+ await home.exports.default({searchParams:Promise.resolve({include_archived:'true'})});
+});
+
 test('home uses one summary request and lets errors reach existing error boundary',async()=>{
- let calls=0;const h=load('../app/page.tsx',{'../lib/api':{api:async(path,parse)=>{calls++;assert.equal(path,'/dashboard');return parse(data)}},'./dashboard':{default:()=>null}});
- await h.exports.default();assert.equal(calls,1);
+ let calls=0;const h=load('../app/page.tsx',{'../lib/api':{api:async(path,parse)=>{calls++;assert.equal(path,'/dashboard?include_archived=false');return parse(data)}},'./dashboard':{default:()=>null}});
+ await h.exports.default({searchParams:Promise.resolve({})});assert.equal(calls,1);
  const bad=load('../app/page.tsx',{'../lib/api':{api:async()=>{throw new Error('unavailable')}},'./dashboard':{default:()=>null}});
- await assert.rejects(bad.exports.default(),/unavailable/);
+ await assert.rejects(bad.exports.default({searchParams:Promise.resolve({})}),/unavailable/);
  assert.match(renderToStaticMarkup(load('../app/loading.tsx').exports.default()),/Loading tracked prices/);
  let retried=false;const page=load('../app/error.tsx').exports.default({reset(){retried=true}});
  assert.match(renderToStaticMarkup(page),/role="alert"/);nodes(page).find(n=>n.type==='button').props.onClick();assert.equal(retried,true);

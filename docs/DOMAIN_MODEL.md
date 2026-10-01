@@ -39,6 +39,12 @@ Every Listing refers to one Product and one Retailer initially. Multiple listing
 
 ## Product
 
+Archive state controls default dashboard visibility only. Existing/new Products
+default active; archived Products remain directly readable and can be explicitly
+included on the dashboard. Archiving/unarchiving never changes Listing tracking
+states, source identity, observations, promotions or alerts. Collection continues
+according to each Listing's tracking state, independently of Product visibility.
+
 **Responsibility:** represent a retailer-independent, specifically identifiable item or variant, with stable identity and descriptive attributes such as name, brand, model, and available identifiers.
 
 A Product must not own a retailer URL, retailer-specific current price, or stock state. Material differences such as capacity, size, pack count, or condition must not be silently collapsed into one identity. Exact category-specific attributes can evolve when actual products require them.

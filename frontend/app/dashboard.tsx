@@ -12,6 +12,7 @@ export function ProductCard({ row }: { row: Summary }) {
     return <article className="panel">
         <p className="muted">{p.brand || 'Brand not specified'} · {p.model || 'Model not specified'}</p>
         <h2><Link href={`/products/${encodeURIComponent(p.id)}`}>{p.name || p.id}</Link></h2>
+        {p.archived && <p>Archived</p>}
         <p>{row.listing_count} Listings</p>
         <p className="price">{row.best_price ? formatPrice(row.best_price.minor_units, row.best_price.currency) : 'No comparable price'}</p>
         <p>{row.best_price ? `Best observed ${row.best_price.basis.replaceAll('_', ' ')}` : row.comparison_status.replaceAll('_', ' ')}</p>
@@ -26,11 +27,12 @@ export function ProductCard({ row }: { row: Summary }) {
     </article>;
 }
 
-export default function Dashboard({ data }: { data: DashboardData }) {
+export default function Dashboard({ data, includeArchived = false }: { data: DashboardData; includeArchived?: boolean }) {
     const [query, setQuery] = useState(''), [filter, setFilter] = useState<Filter>('all');
     const visible = filterProducts(data.products, query, filter);
     return <>
         <div className="controls">
+            <Link href={includeArchived ? '/' : '/?include_archived=true'}>{includeArchived ? 'Hide archived' : 'Show archived'}</Link>
             <label>Search name, brand or model <input type="search" value={query} onChange={e => setQuery(e.target.value)} /></label>
             <label>Filter <select value={filter} onChange={e => setFilter(e.target.value as Filter)}>
                 <option value="all">All products</option><option value="priced">Has current price</option><option value="missing">Missing current price</option><option value="error">Collection error</option><option value="alert">Triggered alert present</option>
@@ -38,7 +40,7 @@ export default function Dashboard({ data }: { data: DashboardData }) {
         </div>
         <p>Price presence means a latest valid Listing observation has an offer or sale price, even if stale. Best price requires all Listings to be fresh, in stock and comparable in one currency. Promotions are excluded.</p>
         <p className="muted">Collection status is process-local and resets on restart. Alert window starts {data.recent_alert_since}; retained events may refer to subsequently invalidated observations.</p>
-        {!data.products.length ? <p className="panel">No products yet. Open Manage catalog to create a Product, Retailer and Listing.</p> : !visible.length ? <p role="status">No products match this search and filter.</p> : <div className="grid">{visible.map(row => <ProductCard key={row.product.id} row={row} />)}</div>}
+        {!data.products.length ? <p className="panel">{includeArchived ? 'No products yet.' : 'No active products. Use Show archived to include archived Products.'} Open Manage catalog to create a Product, Retailer and Listing.</p> : !visible.length ? <p role="status">No products match this search and filter.</p> : <div className="grid">{visible.map(row => <ProductCard key={row.product.id} row={row} />)}</div>}
         {data.truncated && <p>Showing the first 20 products by ID. Search and filters apply only to these loaded products.</p>}
     </>;
 }

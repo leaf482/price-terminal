@@ -58,6 +58,7 @@ func TestDashboardSummary(t *testing.T) {
 }
 
 type dashboardStub struct {
+	includeArchived         bool
 	products                []domain.Product
 	err, priceErr, alertErr error
 	limit, calls            int
@@ -66,7 +67,8 @@ type dashboardStub struct {
 	since, until            time.Time
 }
 
-func (s *dashboardStub) ListProducts(_ context.Context, limit int) ([]domain.Product, error) {
+func (s *dashboardStub) ListDashboardProducts(_ context.Context, limit int, includeArchived bool) ([]domain.Product, error) {
+	s.includeArchived = includeArchived
 	s.limit = limit
 	return s.products, s.err
 }

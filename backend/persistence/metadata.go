@@ -13,7 +13,7 @@ func (s *Store) UpdateProductMetadata(ctx context.Context, p domain.Product) (do
 		return domain.Product{}, err
 	}
 	var saved domain.Product
-	err := s.db.QueryRowContext(ctx, `UPDATE products SET name=$2,brand=$3,model=$4 WHERE id=$1 RETURNING id,name,brand,model`, p.ID, p.Name, p.Brand, p.Model).Scan(&saved.ID, &saved.Name, &saved.Brand, &saved.Model)
+	err := s.db.QueryRowContext(ctx, `UPDATE products SET name=$2,brand=$3,model=$4 WHERE id=$1 RETURNING id,name,brand,model,archived`, p.ID, p.Name, p.Brand, p.Model).Scan(&saved.ID, &saved.Name, &saved.Brand, &saved.Model, &saved.Archived)
 	if err != nil {
 		return domain.Product{}, fmt.Errorf("update product metadata: %w", err)
 	}

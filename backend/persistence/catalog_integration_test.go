@@ -59,12 +59,12 @@ func freshDatabase(t *testing.T, ctx context.Context) *sql.DB {
 		t.Logf("goose %s: %s", action, output)
 		if action == "down" {
 			var alertTablesAbsent, catalogTablePresent bool
-			if err := db.QueryRowContext(ctx, `SELECT NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='listings' AND column_name='tracking_enabled'),
+			if err := db.QueryRowContext(ctx, `SELECT NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='products' AND column_name='archived'),
 				to_regclass('public.price_alert_events') IS NOT NULL AND to_regclass('public.price_observations') IS NOT NULL`).Scan(&alertTablesAbsent, &catalogTablePresent); err != nil {
 				t.Fatal(err)
 			}
 			if !alertTablesAbsent || !catalogTablePresent {
-				t.Fatal("migration 7 rollback must remove tracking column and retain events/observations")
+				t.Fatal("migration 8 rollback must remove archive column and retain events/observations")
 			}
 		}
 	}
@@ -102,8 +102,8 @@ func TestCatalogIntegration(t *testing.T) {
 		if err := db.QueryRowContext(ctx, `SELECT version_id FROM goose_db_version WHERE is_applied ORDER BY id DESC LIMIT 1`).Scan(&version); err != nil {
 			t.Fatal(err)
 		}
-		if version != 7 {
-			t.Fatalf("version = %d, want 7", version)
+		if version != 8 {
+			t.Fatalf("version = %d, want 8", version)
 		}
 		var indexPresent bool
 		if err := db.QueryRowContext(ctx, `SELECT to_regclass('public.listings_product_id_idx') IS NOT NULL`).Scan(&indexPresent); err != nil || !indexPresent {

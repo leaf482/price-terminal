@@ -25,14 +25,15 @@ type productStore interface {
 type productAPI struct{ store productStore }
 
 type productJSON struct {
-	ID    string `json:"id"`
-	Name  string `json:"name"`
-	Brand string `json:"brand"`
-	Model string `json:"model"`
+	Archived bool   `json:"archived"`
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	Brand    string `json:"brand"`
+	Model    string `json:"model"`
 }
 
 func productResponse(p domain.Product) productJSON {
-	return productJSON{ID: p.ID, Name: p.Name, Brand: p.Brand, Model: p.Model}
+	return productJSON{ID: p.ID, Name: p.Name, Brand: p.Brand, Model: p.Model, Archived: p.Archived}
 }
 
 func writeJSON(w http.ResponseWriter, status int, value any) {
@@ -49,7 +50,12 @@ func (api productAPI) create(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, 64*1024)
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
-	var body *productJSON
+	var body *struct {
+		ID    string `json:"id"`
+		Name  string `json:"name"`
+		Brand string `json:"brand"`
+		Model string `json:"model"`
+	}
 	if err := decoder.Decode(&body); err != nil || body == nil {
 		productError(w, 400, "invalid_request", "expected a product JSON object")
 		return
