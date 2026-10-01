@@ -134,9 +134,9 @@ Acceptance: show bounded Product summaries with Listing counts, comparable obser
 
 Acceptance: existing Listings default to tracking enabled; toggle tracking through a small API/UI without removing metadata or historical evidence. Disabled Listings skip provider collection and reject manual refresh, including a persistence guard for in-flight collection; explicit manual observations remain allowed. Re-enabling resumes configured collection. Display tracking independently of observation freshness and collection failures. The former promotion/derived display task was covered by Task 21; provider promotion collection remains deferred.
 
-### Task 29: MSRP provenance and comparisons
+### Task 29: CSV observation import
 
-Acceptance: validate explicit MSRP evidence end to end and label any MSRP-based comparison separately from retailer-list or historical comparisons. Never infer MSRP from an unlabeled crossed-out price. Reinforce semantics already required since Task 4.
+Acceptance: import a bounded CSV of observations for one Listing; validate all rows with row-numbered errors before a single atomic transaction. Preserve absent/zero amounts, currency, timestamps and explicit MSRP evidence; use CSV provenance and do not backfill alerts. Provide a file control with results/errors and current/history refresh. The former MSRP comparison expansion remains deferred; existing MSRP evidence rules still apply.
 
 ## Alerts
 

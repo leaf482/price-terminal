@@ -33,7 +33,50 @@ cycle or manual refresh. In Go, `Listing.TrackingDisabled` defaults to false and
 `TrackingEnabled()` exposes its positive meaning; the database/API use the
 positive `tracking_enabled` boolean.
 
-### Recording observations
+### CSV observation import (Task 29)
+
+Product detail includes **Import CSV observations** for each Listing. Select a
+CSV file to import up to 500 observations (1 MiB maximum) atomically. Use this
+exact header/order; price cells are integer minor units, not decimal prices:
+
+```csv
+observed_at,currency,offer_price_minor,sale_price_minor,list_price_minor,msrp_minor,msrp_source,stock
+2026-01-02T03:04:05.123456789+05:30,USD,0,100,200,300,Manufacturer claim,in_stock
+2026-01-03T00:00:00Z,,,,,,,unknown
+2026-01-04T00:00:00Z,JPY,,1000,,,,out_of_stock
+```
+
+`POST /listings/{id}/observations/import` accepts the raw CSV body, with
+`Content-Type: text/csv` and `X-Import-ID` (1–100 letters/digits/underscores/hyphens).
+Retain this ID and identical file when retrying an uncertain request. IDs are
+global; a reused ID returns 409 rather than appending duplicates. Inspect history
+before assigning a fresh ID after an uncertain result. The UI retains its ID on
+failure until a different file is selected; successful imports show the row count
+and refresh current price/history. No automatic retry is performed.
+
+Blank monetary cells are absent; `0` is a real amount. One row's currency applies
+to every present amount, preventing mixed currencies within an observation.
+USD/JPY may differ between rows without conversion. Stock-only rows may leave
+currency blank. Stock must be `unknown`, `in_stock`, or `out_of_stock`; MSRP needs
+`msrp_source`. RFC3339 calendar/time validation uses the manual API's backend
+parser, without JavaScript timestamp conversion. The existing domain stores UTC
+instants with nanosecond precision; CSV provenance also retains the original
+timestamp text/offset, import ID and physical starting line of each record.
+
+The server validates the complete bounded input before writing. Validation errors
+return 400 with `error.rows` containing CSV line numbers (header is line 1); CSV
+syntax/header errors and empty files are rejected. Size errors return 413. All
+rows use the existing observation insert helper in one transaction; a failed row
+rolls back the import. Success returns 201 with `data.imported` and `data.import_id`.
+Missing Listings return 404; unexpected persistence failures return a safe 500.
+
+Imports are explicit manual facts and remain permitted with tracking disabled.
+**CSV imports never evaluate historical alerts and create no retroactive events.**
+They become normal immutable observations for current/history queries, and can
+serve as earlier comparison evidence for future ordinary alert evaluation.
+Existing current-price ordering, invalidation and history bounds still apply.
+
+### Single manual observation
 
 `POST /listings/{id}/observations` accepts an immutable manual observation:
 
