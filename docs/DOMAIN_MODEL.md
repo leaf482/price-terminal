@@ -55,6 +55,15 @@ A Provider is collection infrastructure associated with sources; it is not a sub
 
 ## Listing
 
+### Catalog correction policy
+
+Product name/brand/model and Retailer name are editable descriptions; empty
+strings remain allowed, as on creation. Their IDs remain immutable. Listing
+ProductID, RetailerID, URL and retailer product ID are immutable source identity.
+For source changes, disable the old Listing if needed and create a new Listing;
+never repoint existing history. Tracking state remains independently editable.
+Metadata edits do not change observations, collection state, promotions or alerts.
+
 **Responsibility:** represent a retailer-specific product page for a defined item/variant and collection context.
 
 A Listing links Product and Retailer and carries a canonical source URL and, where available, a retailer identifier. Avoid duplicate tracking of the same source/context. URL alone may not distinguish selected variants, so retain the source references needed to collect the intended item.

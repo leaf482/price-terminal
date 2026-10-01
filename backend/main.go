@@ -44,6 +44,9 @@ func newHandler(ping func(context.Context) error, products productStore, catalog
 	mux.HandleFunc("GET /products/{id}", api.get)
 	mux.HandleFunc("GET /products", api.list)
 	registerCatalogRoutes(mux, catalog)
+	if metadata, ok := catalog.(metadataStore); ok {
+		registerMetadataRoutes(mux, metadata)
+	}
 	if exports, ok := catalog.(csvExportStore); ok {
 		mux.HandleFunc("GET /listings/{id}/observations/export", csvExportHandler(exports))
 	}

@@ -19,6 +19,7 @@ function harness(file,save=async()=>{}){
  runInNewContext(compiled,{exports,Error,AbortController,setTimeout,clearTimeout,FormData:class{constructor(form){this.fields=form.fields}get(key){return this.fields[key]??null}},require(name){
  if(name==='react')return hooks;if(name==='next/link')return {default:({children,...props})=>React.createElement('a',props,children)};
  if(name==='next/navigation')return {useRouter:()=>({refresh(){refreshes++}})};
+ if(name==='./metadata-editor')return {default:()=>null};
  if(name.endsWith('/catalog'))return {...catalog,postCatalog:save};
  if(name.endsWith('/api'))return {api:(path,_parse,signal)=>new Promise((resolve,reject)=>{requests.push({path,resolve,reject});signal.addEventListener('abort',()=>reject(new Error('abort')),{once:true})})};return require(name)}});
  return {requests,refreshes:()=>refreshes,render(name,props){cursor=0;refCursor=0;return exports[name](props)},setup(){return effect()}};

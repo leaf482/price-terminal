@@ -33,6 +33,20 @@ cycle or manual refresh. In Go, `Listing.TrackingDisabled` defaults to false and
 `TrackingEnabled()` exposes its positive meaning; the database/API use the
 positive `tracking_enabled` boolean.
 
+### Catalog metadata editing (Task 31)
+
+Product detail offers **Edit Product metadata**; catalog management offers
+**Edit Retailer name**. `PUT /products/{id}` replaces the descriptive fields using
+`{"name":"...","brand":"...","model":"..."}`; `PUT /retailers/{id}` takes
+`{"name":"..."}`. All listed fields must be explicit strings; empty strings are
+allowed, while omitted/null fields are rejected. Partial updates are not supported.
+IDs in request bodies and unknown fields are rejected. Success returns the updated
+record in `data`; missing records return 404 and invalid bodies return 400.
+
+Listing Product/Retailer references, URL and retailer product ID remain read-only.
+Disable the old Listing if needed and create a new one for source identity changes.
+Metadata updates do not alter tracking state or historical observations.
+
 ### Observation audit CSV export (Task 30)
 
 Use **Export CSV** on a Listing in Product detail, or
