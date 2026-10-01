@@ -33,6 +33,22 @@ cycle or manual refresh. In Go, `Listing.TrackingDisabled` defaults to false and
 `TrackingEnabled()` exposes its positive meaning; the database/API use the
 positive `tracking_enabled` boolean.
 
+### Product Listing comparison (Task 33)
+
+Product detail compares Listings in sortable cards using observed offer price,
+otherwise sale price. Price sorts group currencies alphabetically in both
+directions, then sort amounts within each currency; missing prices come last.
+Newest-observation sorting retains nanosecond precision, with missing observations
+last. Retailer-name sorting is case-insensitive; ties use Listing ID. Sorting
+does not change history or discard stale, out-of-stock or tracking-disabled rows.
+
+The best observed price is the existing backend result: all Listings must have
+fresh, in-stock observations with comparable prices in one currency. Otherwise
+the reason no global best is available is displayed. Tracking and collection
+failure remain distinct from observation freshness. Promotion evidence and
+user-selected EffectivePrice scenarios stay in separate sections of each card;
+conditional savings are never guaranteed and never affect observed-price sorting.
+
 ### Product archive state (Task 32)
 
 Product detail supports Archive/Unarchive using
