@@ -44,6 +44,9 @@ func newHandler(ping func(context.Context) error, products productStore, catalog
 	mux.HandleFunc("GET /products/{id}", api.get)
 	mux.HandleFunc("GET /products", api.list)
 	registerCatalogRoutes(mux, catalog)
+	if changes, ok := catalog.(priceChangesStore); ok {
+		mux.HandleFunc("GET /price-changes", priceChangesHandler(changes))
+	}
 	if health, ok := catalog.(collectionHealthStore); ok {
 		mux.HandleFunc("GET /collection/overview", collectionHealthHandler(health))
 	}

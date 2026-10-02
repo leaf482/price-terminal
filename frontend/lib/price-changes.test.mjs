@@ -1,0 +1,30 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {createRequire} from 'node:module';
+import {runInNewContext} from 'node:vm';
+import ts from 'typescript';
+import React from 'react';
+import {renderToStaticMarkup} from 'react-dom/server';
+import * as changes from './price-changes.ts';
+const make=(id,before,after,currency='USD')=>({listing_id:'constructor',product_id:'__proto__',product_name:'Camera',retailer_id:'toString',retailer_name:'Shop',previous:{id:'p'+id,observed_at:'2026-01-01T00:00:00Z',minor_units:before},current:{id,observed_at:'2026-01-02T00:00:00.123456789Z',minor_units:after},currency,change_minor:String(BigInt(after)-BigInt(before)),percentage:before==='0'?null:'0.00',direction:BigInt(after)<BigInt(before)?'decreased':BigInt(after)>BigInt(before)?'increased':'unchanged'});
+const down=make('constructor','100','0'),up=make('__proto__','100','200','JPY'),same=make('toString','100','100'),zero=make('zero','0','100');
+const data={changes:[zero,up,same,down],truncated:true};
+test('exact prices, percentage sorting across currencies, nulls, stable newest order and filters',()=>{
+ assert.deepEqual(changes.parsePriceChanges(data),data);assert.throws(()=>changes.parsePriceChanges({...data,changes:Array(101).fill(down)}));
+ assert.equal(changes.changePrice('0','USD'),'USD 0.00');assert.equal(changes.changePrice('-25','USD'),'USD -0.25');assert.equal(changes.changePrice('9223372036854775807','JPY'),'JPY 9223372036854775807');
+ assert.deepEqual(changes.changeRows(data.changes,'all','','newest'),data.changes);
+ assert.deepEqual(changes.changeRows(data.changes,'all','','decrease'),[down,same,up,zero]);assert.deepEqual(changes.changeRows(data.changes,'all','','increase'),[up,same,down,zero]);
+ for(const r of [down,up,same])assert.ok(changes.changeRows(data.changes,r.direction,'','newest').includes(r));
+ assert.equal(changes.changeRows(data.changes,'all',' SHOP ','newest').length,4);assert.equal(changes.changeRows(data.changes,'all','camera','newest').length,4);assert.equal(changes.changeRows(data.changes,'all','missing','newest').length,0);
+ const a=make('a','1000000000000000','1000000000000001'),b=make('b','1000000000000000','1000000000000002');assert.deepEqual(changes.changeRows([a,b],'all','','increase'),[b,a]);
+});
+test('Price Changes page shows exact values, context/navigation, bounded and empty/error states',async()=>{
+ const states=[],requests=[];let index=0,effect;const exports={},require=createRequire(import.meta.url);
+ const code=ts.transpileModule(readFileSync(new URL('../app/price-changes/page.tsx',import.meta.url),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText;
+ runInNewContext(code,{exports,AbortController,setTimeout,clearTimeout,require(name){if(name==='react')return{...React,useState(v){const i=index++;if(!(i in states))states[i]=v;return[states[i],v=>states[i]=typeof v==='function'?v(states[i]):v]},useEffect(f){effect=f}};if(name==='next/link')return{default:({href,children})=>React.createElement('a',{href},children)};if(name.endsWith('/price-changes'))return changes;if(name.endsWith('/api'))return{api:path=>{assert.equal(path,'/price-changes');return new Promise((resolve,reject)=>requests.push({resolve,reject}))}};return require(name)}});
+ const render=()=>{index=0;return renderToStaticMarkup(exports.default())};const settle=async()=>{for(let i=0;i<8;i++)await Promise.resolve()};
+ assert.match(render(),/Loading price changes/);let cleanup=effect();requests[0].resolve(data);await settle();const html=render();for(const text of ['Camera','Shop','USD 0.00','JPY 200','decreased','Unavailable (previous zero)','Older comparisons','123456789'])assert.ok(html.includes(text),text);assert.match(html,/href="\/listings\/constructor"/);cleanup();
+ cleanup=effect();requests[1].resolve({changes:[],truncated:false});await settle();assert.match(render(),/No price changes match/);cleanup();
+ cleanup=effect();requests[2].reject(new Error('failure'));await settle();assert.match(render(),/Could not load/);cleanup();
+});
