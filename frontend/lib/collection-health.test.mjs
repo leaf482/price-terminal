@@ -11,6 +11,28 @@ const row={listing_id:'constructor',product_id:'__proto__',product_name:'Camera'
 const never={...row,listing_id:'__proto__',product_name:'Apple',attempted_at:null,successful_at:null,observed_at:null,outcome:'',error_summary:''};
 const disabled={...row,listing_id:'toString',tracking_enabled:false,outcome:'success',error_summary:''};
 const data={listings:[row,never,disabled],truncated:true,counts:{total:3,healthy:0,error:1,never:1,disabled:1}};
+test('collection sorting preserves fractional precision, offset instants, null placement and exact ties',()=>{
+ const cases=[
+  ['microseconds','2026-01-02T03:04:05.123001Z','2026-01-02T03:04:05.123999Z'],
+  ['nanoseconds','2026-01-02T03:04:05.123456788Z','2026-01-02T03:04:05.123456789Z'],
+  ['ordinary seconds','2026-01-02T03:04:04Z','2026-01-02T03:04:05Z'],
+  ['offset crossing year','2025-12-31T23:59:59.999999999Z','2026-01-01T01:00:00+01:00'],
+  ['leap day','2024-02-29T23:59:59Z','2024-03-01T00:00:00Z'],
+  ['non-leap century','2100-02-28T23:59:59Z','2100-03-01T00:00:00Z'],
+ ];
+ for(const sort of ['attempt','success']){
+  const make=(id,time)=>({...row,listing_id:id,attempted_at:time,successful_at:time});
+  for(const [label,earlier,later] of cases){
+   // Choose IDs that would produce the wrong result if precision were lost.
+   const early=make(sort==='attempt'?'a':'z',earlier),late=make(sort==='attempt'?'z':'a',later);
+   assert.deepEqual(health.collectionRows([late,early],'all',sort),sort==='attempt'?[late,early]:[early,late],`${sort}: ${label}`);
+  }
+  const ties=[make('z','2026-01-02T03:04:05.123000000Z'),make('a','2026-01-01T22:04:05.123-05:00'),make('m','2026-01-02T08:34:05.123000+05:30')];
+  assert.deepEqual(health.collectionRows(ties,'all',sort).map(r=>r.listing_id),['a','m','z']);
+  const nulls=[make('null-z',null),make('null-a',null)],real=make('real','2026-01-02T03:04:05Z');
+  assert.deepEqual(health.collectionRows([nulls[0],real,nulls[1]],'all',sort).map(r=>r.listing_id),sort==='attempt'?['real','null-a','null-z']:['null-a','null-z','real']);
+ }
+});
 test('health parser, filters, sorting and observation-only freshness',()=>{
  assert.deepEqual(health.parseCollectionHealth(data),data);assert.throws(()=>health.parseCollectionHealth({...data,listings:Array(101).fill(row)}));
  for(const [filter,want] of [['error',[row]],['never',[never]],['disabled',[disabled]],['enabled',[row,never]]])assert.deepEqual(health.collectionRows(data.listings,filter,'attempt'),want);
