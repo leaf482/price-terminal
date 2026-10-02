@@ -54,7 +54,7 @@ export default function CatalogManager() {
         setInput(body.product_id);
     } reload(); }}/>)}</div>
  {data && <><h2>Products</h2>{!data.products.length && <p>No Products yet.</p>}<ul>{data.products.map(p => <li key={p.id}><Link href={`/products/${encodeURIComponent(p.id)}`}>{p.name || p.id}</Link> · ID: {p.id} · {p.brand} {p.model} <button onClick={() => { setSelected(p.id); setInput(p.id); }}>View Listings</button></li>)}</ul>
- <h2>Retailers</h2>{!data.retailers.length && <p>No Retailers yet.</p>}<ul>{data.retailers.map(r => <li key={r.id}>{r.name || r.id} · ID: {r.id}<MetadataEditor kind="retailers" record={r} onSaved={reload}/></li>)}</ul><p>Up to 100 Products and Retailers shown. For other records, enter their exact IDs.</p></>}
+ <h2>Retailers</h2>{!data.retailers.length && <p>No Retailers yet.</p>}<ul>{data.retailers.map(r => <li key={r.id}><Link href={`/retailers/${encodeURIComponent(r.id)}`}>{r.name || r.id}</Link> · ID: {r.id}<MetadataEditor kind="retailers" record={r} onSaved={reload}/></li>)}</ul><p>Up to 100 Products and Retailers shown. For other records, enter their exact IDs.</p></>}
  <h2>Listings by Product</h2><p>Source fields are read-only. Disable the old Listing if needed and create a new one when its Product, Retailer, URL or retailer product ID changes.</p><form onSubmit={e => { e.preventDefault(); setSelected(input); }}><label>Existing Product ID <input required value={input} onChange={e => setInput(e.target.value)}/></label> <button>View Listings</button></form>
  {selected && <ListingBrowser key={`${selected}:${revision}`} id={selected} retailers={data?.retailers || []}/>}
  </>;

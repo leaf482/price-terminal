@@ -75,6 +75,9 @@ func newHandler(ping func(context.Context) error, products productStore, catalog
 		mux.HandleFunc("GET /listings/{id}/history", historyHandler(history, time.Now))
 	}
 	if len(prices) > 0 {
+		if overview, ok := catalog.(retailerOverviewStore); ok {
+			mux.HandleFunc("GET /retailers/{id}/overview", retailerOverviewHandler(overview, prices[0]))
+		}
 		registerCurrentRoutes(mux, prices[0])
 		if dashboard, ok := catalog.(dashboardStore); ok {
 			mux.HandleFunc("GET /dashboard", dashboardHandler(dashboard, prices[0]))
