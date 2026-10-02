@@ -20,7 +20,7 @@ function load(path='../app/dashboard.tsx',extra={}) {
  const source=readFileSync(new URL(path,import.meta.url),'utf8');
  const compiled=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX,target:ts.ScriptTarget.ES2022}}).outputText;
  const exports={},require=createRequire(import.meta.url);
- runInNewContext(compiled,{exports,require(name){if(name==='react')return hooks;if(name==='next/link')return {default:({href,children})=>React.createElement('a',{href},children)};if(name.endsWith('/dashboard'))return dashboard;if(name.endsWith('/prices'))return prices;if(name in extra)return extra[name];return require(name)}});
+ runInNewContext(compiled,{exports,require(name){if(name==='react')return hooks;if(name==='next/link')return {default:({href,children})=>React.createElement('a',{href},children)};if(name in extra)return extra[name];if(name.endsWith('/dashboard'))return dashboard;if(name.endsWith('/prices'))return prices;if(name in extra)return extra[name];return require(name)}});
  return {exports,render(){cursor=0;return exports.default({data})}};
 }
 function nodes(e){if(!e||typeof e!=='object')return[];if(Array.isArray(e))return e.flatMap(nodes);return[e,...nodes(e.props?.children)]}
@@ -63,16 +63,16 @@ test('archived dashboard data remains searchable with unchanged summaries and fi
  assert.match(renderToStaticMarkup(h.exports.ProductCard({row})),/2 Listings/);
  assert.match(renderToStaticMarkup(h.exports.default({data,includeArchived:true})),/Hide archived/);
  assert.match(renderToStaticMarkup(load().render()),/Show archived/);
- const home=load('../app/page.tsx',{'../lib/api':{api:async(path,parse)=>{assert.equal(path,'/dashboard?include_archived=true');return parse({...data,products:[row]})}},'./dashboard':{default:()=>null}});
+ const home=load('../app/products/page.tsx',{'../../lib/api':{api:async(path,parse)=>{assert.equal(path,'/dashboard?include_archived=true');return parse({...data,products:[row]})}},'../dashboard':{default:()=>null}});
  await home.exports.default({searchParams:Promise.resolve({include_archived:'true'})});
 });
 
 test('home uses one summary request and lets errors reach existing error boundary',async()=>{
- let calls=0;const h=load('../app/page.tsx',{'../lib/api':{api:async(path,parse)=>{calls++;assert.equal(path,'/dashboard?include_archived=false');return parse(data)}},'./dashboard':{default:()=>null}});
+ let calls=0;const h=load('../app/products/page.tsx',{'../../lib/api':{api:async(path,parse)=>{calls++;assert.equal(path,'/dashboard?include_archived=false');return parse(data)}},'../dashboard':{default:()=>null}});
  await h.exports.default({searchParams:Promise.resolve({})});assert.equal(calls,1);
- const bad=load('../app/page.tsx',{'../lib/api':{api:async()=>{throw new Error('unavailable')}},'./dashboard':{default:()=>null}});
+ const bad=load('../app/products/page.tsx',{'../../lib/api':{api:async()=>{throw new Error('unavailable')}},'../dashboard':{default:()=>null}});
  await assert.rejects(bad.exports.default({searchParams:Promise.resolve({})}),/unavailable/);
- assert.match(renderToStaticMarkup(load('../app/loading.tsx').exports.default()),/Loading tracked prices/);
+ assert.match(renderToStaticMarkup(load('../app/products/loading.tsx').exports.default()),/Loading tracked prices/);
  let retried=false;const page=load('../app/error.tsx').exports.default({reset(){retried=true}});
  assert.match(renderToStaticMarkup(page),/role="alert"/);nodes(page).find(n=>n.type==='button').props.onClick();assert.equal(retried,true);
 });

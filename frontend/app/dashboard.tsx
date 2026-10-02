@@ -32,7 +32,7 @@ export default function Dashboard({ data, includeArchived = false }: { data: Das
     const visible = filterProducts(data.products, query, filter);
     return <>
         <div className="controls">
-            <Link href={includeArchived ? '/' : '/?include_archived=true'}>{includeArchived ? 'Hide archived' : 'Show archived'}</Link>
+            <Link href={includeArchived ? '/products' : '/products?include_archived=true'}>{includeArchived ? 'Hide archived' : 'Show archived'}</Link>
             <label>Search name, brand or model <input type="search" value={query} onChange={e => setQuery(e.target.value)} /></label>
             <label>Filter <select value={filter} onChange={e => setFilter(e.target.value as Filter)}>
                 <option value="all">All products</option><option value="priced">Has current price</option><option value="missing">Missing current price</option><option value="error">Collection error</option><option value="alert">Triggered alert present</option>

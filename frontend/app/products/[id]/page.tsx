@@ -22,7 +22,7 @@ export default async function ProductPage({ params }: {
     const retailerNames: Record<string, string> = Object.fromEntries(retailers.map(r => [r.id, r.name]));
     const missing = [...new Set(prices.listings.map(r => r.listing.retailer_id))].filter(id => !Object.hasOwn(retailerNames, id));
     await Promise.all(missing.map(async id => { const r = await api(`/retailers/${encodeURIComponent(id)}`, value => parseRetailers([value])[0]); Object.defineProperty(retailerNames, id, { value: r.name, enumerable: true, configurable: true, writable: true }); }));
-    return <main><Link href="/">← Products</Link> <Link href="/catalog">Manage catalog</Link><header><p className="eyebrow">{product.brand || "PRODUCT"}</p><h1>{product.name || product.id}</h1><p>{product.model} · ID: {product.id}</p></header>
+    return <main><Link href="/products">← Products</Link> <Link href="/catalog">Manage catalog</Link><header><p className="eyebrow">{product.brand || "PRODUCT"}</p><h1>{product.name || product.id}</h1><p>{product.model} · ID: {product.id}</p></header>
  <ArchiveControls id={product.id} archived={product.archived === true}/><MetadataEditor kind="products" record={product}/><h2>Current observations</h2><p>Listing source fields are read-only. To change Product, Retailer, URL or retailer product ID, disable the old Listing if needed and create a new Listing.</p>{!prices.listings.length && <p>No Listings for this product yet.</p>}
  <ListingComparison prices={prices} retailers={retailerNames} revision={revision}/>
  <HistoryView key={`${product.id}:${revision}`} listings={prices.listings.map(x => ({ id: x.listing.id, retailer: retailerNames[x.listing.retailer_id] || x.listing.retailer_id }))}/></main>;
