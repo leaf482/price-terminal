@@ -846,3 +846,21 @@ A process crash before recording, or an unavailable database, can therefore leav
 a gap in this operational audit. There are no retries or durable in-flight records.
 Process-local latest status still resets on restart; recorded attempt history does
 not. Neither attempt time nor outcome changes observation freshness.
+
+
+### Bulk manual collection
+
+Collection health supports selecting up to 20 Listings and Refresh selected.
+`POST /collection/refresh` accepts `{"listing_ids":["listing-a","listing-b"]}`.
+The raw array must contain 1–20 nonblank IDs; duplicates are collected once in
+first-occurrence order. A valid batch returns HTTP 200 with per-Listing success,
+failure, unavailable, or cancelled outcomes and safe codes; successes include
+an observation ID. Disabled/unconfigured/busy Listings return unavailable.
+
+Work is sequential through the existing manual collection runtime, including
+per-Listing deadlines and manual CollectionAttempt records. Cancellation stops
+unstarted work; committed observations survive other failures. Rejected requests
+and unstarted work create no attempt records. There are no automatic retries.
+A disconnected client may not receive results even though some writes succeeded;
+reload health and inspect attempt history before explicitly retrying. Selections
+persist across filters; only selected IDs are sent. Health reloads after a batch.

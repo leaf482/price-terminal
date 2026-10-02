@@ -138,7 +138,7 @@ func run() error {
 	go func() { collectorDone <- runtime.Run(ctx) }()
 	server := &http.Server{
 		Addr:              address,
-		Handler:           newHandler(db.PingContext, store, store, currentAPI{store: store, status: runtime.Status, collect: runtime.Collect, maxAge: maxAge, now: time.Now}),
+		Handler:           newHandler(db.PingContext, store, store, currentAPI{store: store, status: runtime.Status, collect: runtime.Collect, bulkCollect: runtime.CollectBulk, maxAge: maxAge, now: time.Now}),
 		BaseContext:       func(net.Listener) context.Context { return ctx },
 		ReadHeaderTimeout: 5 * time.Second,
 	}

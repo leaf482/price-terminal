@@ -102,9 +102,15 @@ var ErrBusy = errors.New("listing collection already in progress")
 
 // Collect performs one configured attempt synchronously. The same per-listing
 // guard is used by scheduled cycles; no work is queued or retried.
-func (r *Runtime) Collect(ctx context.Context, id string) (err error) {
+func (r *Runtime) Collect(ctx context.Context, id string) error {
+	_, err := r.collect(ctx, id)
+	return err
+}
+
+func (r *Runtime) collect(ctx context.Context, id string) (string, error) {
+	var err error
 	if r == nil {
-		return ErrUnavailable
+		return "", ErrUnavailable
 	}
 	var selected *Target
 	for i := range r.targets {
@@ -114,10 +120,10 @@ func (r *Runtime) Collect(ctx context.Context, id string) (err error) {
 		}
 	}
 	if selected == nil {
-		return ErrUnavailable
+		return "", ErrUnavailable
 	}
 	if err = ctx.Err(); err != nil {
-		return err
+		return "", err
 	}
 	ctx, cancel := context.WithTimeout(ctx, r.timeout)
 	defer cancel()
@@ -126,13 +132,13 @@ func (r *Runtime) Collect(ctx context.Context, id string) (err error) {
 		if r.start(id) {
 			r.finish(id, err)
 		}
-		return err
+		return "", err
 	}
 	if listing.TrackingDisabled {
-		return domain.ErrTrackingDisabled
+		return "", domain.ErrTrackingDisabled
 	}
 	if !r.start(id) {
-		return ErrBusy
+		return "", ErrBusy
 	}
 
 	o := ingestion.Outcome{Listing: listing, ResultID: rand.Text(), Started: true, StartedAt: time.Now().UTC()}
@@ -140,7 +146,10 @@ func (r *Runtime) Collect(ctx context.Context, id string) (err error) {
 	o.Err, o.FinishedAt = err, time.Now().UTC()
 	r.finish(id, err)
 	r.record(ctx, "manual", o)
-	return err
+	if err == nil {
+		return o.Collected.ID(), nil
+	}
+	return "", err
 }
 func (r *Runtime) finish(id string, err error) {
 	r.mu.Lock()
