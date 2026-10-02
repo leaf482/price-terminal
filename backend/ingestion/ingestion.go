@@ -6,6 +6,7 @@ package ingestion
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -15,6 +16,8 @@ import (
 )
 
 // Store is the existing persistence functionality needed for a single write.
+var ErrListingLookup = errors.New("collection listing lookup failed")
+
 type Store interface {
 	GetListing(context.Context, string) (domain.Listing, error)
 	InsertPriceObservation(context.Context, string, domain.PriceObservation) error
@@ -65,7 +68,7 @@ func (i *Ingestor) Ingest(ctx context.Context, resultID string, listing domain.L
 	// the provider rather than relying on the cycle's earlier snapshot.
 	current, err := i.store.GetListing(ctx, listing.ID)
 	if err != nil {
-		return Collected{}, fmt.Errorf("ingest listing lookup: %w", err)
+		return Collected{}, fmt.Errorf("%w: %w", ErrListingLookup, err)
 	}
 	if current.TrackingDisabled {
 		return Collected{}, domain.ErrTrackingDisabled
@@ -106,7 +109,7 @@ func (i *Ingestor) Persist(ctx context.Context, collected Collected) error {
 	}
 	stored, err := i.store.GetListing(ctx, collected.listing.ID)
 	if err != nil {
-		return fmt.Errorf("ingest listing lookup: %w", err)
+		return fmt.Errorf("%w: %w", ErrListingLookup, err)
 	}
 	// Reject stale or fabricated source/relationship context instead of attaching
 	// facts collected for it to a different stored listing. No related rows are created.

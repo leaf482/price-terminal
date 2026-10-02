@@ -414,7 +414,7 @@ sequence. Migration 2 adds `products`, `retailers`, and `listings`. Migration 3
 adds `price_observations`. Migration 4 adds append-only `promotions` evidence.
 Migration 5 adds `price_alerts` and `price_alert_events`. Migration 6 adds
 `observation_invalidations` and a Product-to-Listing index. Migration 7 adds
-`listings.tracking_enabled`, defaulting existing and new Listings to true. Migration 8 adds `products.archived` with default false; the latest version is 8.
+`listings.tracking_enabled`, defaulting existing and new Listings to true. Migration 8 adds `products.archived` with default false; migration 9 adds operational `collection_attempts`; the latest version is 9.
 Rolling migration 8 back removes only archive state; reapplying defaults Products to active.
 Rolling migration 7 back drops only tracking state and returns to version 6 (reapply defaults tracking to enabled). Rolling migration 6 back drops the invalidation table/index and returns to version 5. Do not roll back migration 6 on
 real data casually: previously excluded observations would become visible again.
@@ -823,3 +823,26 @@ npm start
 Next.js generates `next-env.d.ts` and `.next/` during development/build; these and
 installed dependencies are ignored by Git. Keep `package-lock.json` with the
 project so `npm ci` installs the same dependency versions.
+
+
+### Collection attempt audit
+
+Listing detail reads `GET /listings/{id}/collection-attempts`: the newest 50
+completed attempts ordered by start time descending, then attempt ID descending.
+Scheduled and manual Refresh price collection use the same recorder. Successful
+records reference the immutable observation; alert-evaluation failure does not
+change collection success. Failure summaries are fixed codes only.
+
+Disabled/unconfigured/busy requests, preflight lookup failures, and cancellation
+before ingestion starts are rejected without an attempt row. A tracking-disable
+race after ingestion starts records `unavailable`. Started cancellations/timeouts
+record `cancelled`; provider/normalization and persistence failures remain distinct.
+Manual observation entry and CSV import are not collection attempts.
+
+Attempt insertion is best-effort after ingestion, using a separate two-second
+context even on cancellation. Failure emits `collection_attempt_record_failed`
+without raw errors and never rolls back a valid observation or causes a retry.
+A process crash before recording, or an unavailable database, can therefore leave
+a gap in this operational audit. There are no retries or durable in-flight records.
+Process-local latest status still resets on restart; recorded attempt history does
+not. Neither attempt time nor outcome changes observation freshness.

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import AttemptHistory from './attempt-history';
 import { notFound } from 'next/navigation';
 import { randomUUID } from 'node:crypto';
 import { loadListingDetail } from '../../../lib/listing-detail';
@@ -36,6 +37,7 @@ export default async function ListingPage({ params }: { params: Promise<{ id: st
         {o?.retailer_list_price !== undefined && <p>Retailer list: {formatPrice(o.retailer_list_price, o.currency!)}</p>}
         {o?.sale_price !== undefined && o.offer_price !== undefined && <p>Sale price: {formatPrice(o.sale_price, o.currency!)}</p>}
         <CollectionControls id={l.id} status={c.collection} trackingEnabled={l.tracking_enabled !== false}/>
+        <AttemptHistory key={`attempts-${revision}`} listingID={l.id}/>
         <TrackingControls id={l.id} enabled={l.tracking_enabled !== false}/>
         <RecordPrice listingID={l.id}/><CSVImport listingID={l.id}/><CSVExport listingID={l.id}/>
         {/* Refresh client reads even for backdated imports or newly invalidated facts. */}

@@ -27,11 +27,13 @@ type Job struct {
 // attempt. Collected is retained on persistence failure for an explicit Persist
 // retry; it is not itself evidence of a successful write.
 type Outcome struct {
-	Listing   domain.Listing
-	ResultID  string
-	Started   bool
-	Collected Collected
-	Err       error
+	Listing    domain.Listing
+	ResultID   string
+	StartedAt  time.Time
+	FinishedAt time.Time
+	Started    bool
+	Collected  Collected
+	Err        error
 }
 
 // Run processes at most MaxBatchSize jobs sequentially, with one child deadline
@@ -68,6 +70,7 @@ func Run(ctx context.Context, store Store, jobs []Job, perListingTimeout time.Du
 			outcome.Err = err
 		} else {
 			outcome.Started = true
+			outcome.StartedAt = time.Now().UTC()
 			if job.Provider == nil {
 				outcome.Err = fmt.Errorf("ingest batch: provider is required")
 			} else {
@@ -75,6 +78,9 @@ func Run(ctx context.Context, store Store, jobs []Job, perListingTimeout time.Du
 				outcome.Collected, outcome.Err = New(job.Provider, store).Ingest(itemCtx, job.ResultID, job.Listing)
 				cancel()
 			}
+		}
+		if outcome.Started {
+			outcome.FinishedAt = time.Now().UTC()
 		}
 		outcomes[index] = outcome
 		if job.OnComplete != nil {

@@ -134,8 +134,12 @@ func (r *Runtime) Collect(ctx context.Context, id string) (err error) {
 	if !r.start(id) {
 		return ErrBusy
 	}
-	defer func() { r.finish(id, err) }()
-	_, err = ingestion.New(selected.Provider, r.store).Ingest(ctx, rand.Text(), listing)
+
+	o := ingestion.Outcome{Listing: listing, ResultID: rand.Text(), Started: true, StartedAt: time.Now().UTC()}
+	o.Collected, err = ingestion.New(selected.Provider, r.store).Ingest(ctx, o.ResultID, listing)
+	o.Err, o.FinishedAt = err, time.Now().UTC()
+	r.finish(id, err)
+	r.record(ctx, "manual", o)
 	return err
 }
 func (r *Runtime) finish(id string, err error) {
@@ -189,7 +193,8 @@ func (r *Runtime) cycle(ctx context.Context) {
 		if ctx.Err() != nil {
 			break
 		}
-		// Source resolution is part of this attempt; missing listings remain errors.
+		// Preflight source resolution updates latest status on failure, but does not
+		// start an ingestion attempt or create a durable attempt record.
 		lookupCtx, cancel := context.WithTimeout(ctx, r.timeout)
 		listing, err := r.store.GetListing(lookupCtx, target.ListingID)
 		cancel()
@@ -209,6 +214,7 @@ func (r *Runtime) cycle(ctx context.Context) {
 			Listing: listing, ResultID: rand.Text(), Provider: target.Provider,
 			OnComplete: func(outcome ingestion.Outcome) {
 				r.finish(outcome.Listing.ID, outcome.Err)
+				r.record(ctx, "scheduled", outcome)
 			},
 		})
 	}

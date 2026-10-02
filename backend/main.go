@@ -68,6 +68,9 @@ func newHandler(ping func(context.Context) error, products productStore, catalog
 	if observations, ok := catalog.(ingestion.Store); ok {
 		mux.HandleFunc("POST /listings/{id}/observations", manualObservationHandler(observations))
 	}
+	if attempts, ok := catalog.(attemptStore); ok {
+		registerAttemptRoutes(mux, attempts)
+	}
 	if quality, ok := catalog.(qualityStore); ok {
 		registerQualityRoutes(mux, quality)
 	}

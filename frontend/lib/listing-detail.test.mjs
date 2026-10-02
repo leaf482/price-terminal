@@ -29,7 +29,7 @@ function load(file,data){
   if(name==='next/navigation')return{notFound(){throw new Error('not-found')}};
   if(name.endsWith('/listing-detail'))return{loadListingDetail:async id=>{assert.equal(id,'constructor');return data}};
   if(name.endsWith('/prices'))return prices;
-  if(name.startsWith('../../products/'))return{default:props=>React.createElement('span',{'data-control':name},JSON.stringify(props))};
+  if(name === './attempt-history' || name.startsWith('../../products/'))return{default:props=>React.createElement('span',{'data-control':name},JSON.stringify(props))};
   return require(name);
  }});return exports.default;
 }

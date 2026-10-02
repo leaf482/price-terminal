@@ -59,12 +59,12 @@ func freshDatabase(t *testing.T, ctx context.Context) *sql.DB {
 		t.Logf("goose %s: %s", action, output)
 		if action == "down" {
 			var alertTablesAbsent, catalogTablePresent bool
-			if err := db.QueryRowContext(ctx, `SELECT NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='products' AND column_name='archived'),
+			if err := db.QueryRowContext(ctx, `SELECT to_regclass('public.collection_attempts') IS NULL,
 				to_regclass('public.price_alert_events') IS NOT NULL AND to_regclass('public.price_observations') IS NOT NULL`).Scan(&alertTablesAbsent, &catalogTablePresent); err != nil {
 				t.Fatal(err)
 			}
 			if !alertTablesAbsent || !catalogTablePresent {
-				t.Fatal("migration 8 rollback must remove archive column and retain events/observations")
+				t.Fatal("migration 9 rollback must remove attempts table and retain events/observations")
 			}
 		}
 	}
@@ -93,7 +93,7 @@ func TestCatalogIntegration(t *testing.T) {
 		if err := rows.Err(); err != nil {
 			t.Fatal(err)
 		}
-		want := []string{"goose_db_version", "listings", "observation_invalidations", "price_alert_events", "price_alerts", "price_observations", "products", "promotions", "retailers"}
+		want := []string{"collection_attempts", "goose_db_version", "listings", "observation_invalidations", "price_alert_events", "price_alerts", "price_observations", "products", "promotions", "retailers"}
 		if !reflect.DeepEqual(tables, want) {
 			t.Fatalf("tables = %v, want %v", tables, want)
 		}
@@ -102,8 +102,8 @@ func TestCatalogIntegration(t *testing.T) {
 		if err := db.QueryRowContext(ctx, `SELECT version_id FROM goose_db_version WHERE is_applied ORDER BY id DESC LIMIT 1`).Scan(&version); err != nil {
 			t.Fatal(err)
 		}
-		if version != 8 {
-			t.Fatalf("version = %d, want 8", version)
+		if version != 9 {
+			t.Fatalf("version = %d, want 9", version)
 		}
 		var indexPresent bool
 		if err := db.QueryRowContext(ctx, `SELECT to_regclass('public.listings_product_id_idx') IS NOT NULL`).Scan(&indexPresent); err != nil || !indexPresent {
