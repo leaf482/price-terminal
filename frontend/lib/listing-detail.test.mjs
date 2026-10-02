@@ -44,6 +44,7 @@ test('Listing composition preserves navigation, price/stock states and existing 
   for(const control of ['collection-controls','tracking-controls','record-price','csv-import','csv-export','history-view','promotion-view','alert-view','quality-view'])assert.ok(html.includes(`products/[id]/${control}`));
   const collection=nodes(tree).find(n=>n.props?.status);assert.equal(collection.props.trackingEnabled,false);assert.deepEqual(collection.props.status,current.collection);
   const history=nodes(tree).find(n=>n.props?.listings);assert.equal(history.props.listings[0].id,'constructor');
+  assert.ok(nodes(tree).some(n=>n.props?.table===true&&n.props.listingID==='constructor'));
  }
  const missing=load('../app/listings/[id]/page.tsx',null);await assert.rejects(missing({params:Promise.resolve({id:'constructor'})}),/not-found/);
  const fallback=await load('../app/listings/[id]/page.tsx',{current,product:null,retailer:null})({params:Promise.resolve({id:'constructor'})});assert.match(renderToStaticMarkup(fallback),/Product metadata is unavailable/);assert.match(renderToStaticMarkup(fallback),/Retailer metadata is unavailable/);

@@ -1,9 +1,11 @@
 "use client";
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../../../lib/api';
+import { formatPrice } from '../../../lib/prices';
 import { parseAuditList, parseAudit, invalidateObservation, type Audit, type AuditList } from '../../../lib/quality';
-export default function QualityView({ listingID }: {
+export default function QualityView({ listingID, table = false }: {
     listingID: string;
+    table?: boolean;
 }) {
     const [data, setData] = useState<AuditList | null>(null), [error, setError] = useState(''), [lookup, setLookup] = useState(''), [found, setFound] = useState<Audit | null>(null), [busy, setBusy] = useState(false), [revision, setRevision] = useState(0);
     const pending = useRef(false);
@@ -39,10 +41,23 @@ export default function QualityView({ listingID }: {
         pending.current = false;
         setBusy(false);
     } }}><label>Inspect an exact observation ID <input required value={lookup} onChange={e => setLookup(e.target.value)}/></label> <button disabled={busy}>Inspect</button></form>
- {error && <p role="alert">{error}</p>}{!data && !error && <p>Loading audit…</p>}{found && <AuditRecord record={found} busy={busy} onInvalidate={invalidate}/>}{data?.truncated && <p>Newest 100 observations shown. Inspect older records by exact ID.</p>}{data?.observations.length === 0 && <p>No observations.</p>}{data?.observations.filter(a => a.id !== found?.id).map(a => <AuditRecord key={a.id} record={a} busy={busy} onInvalidate={invalidate}/>)}</section>;
+ {error && <p role="alert">{error}</p>}{!data && !error && <p>Loading audit…</p>}{found && <AuditRecord record={found} busy={busy} onInvalidate={invalidate}/>}{data?.truncated && <p>Newest 100 observations shown. Inspect older records by exact ID or use Export CSV for a larger audit export (up to 10,000 rows).</p>}{data?.observations.length === 0 && <p>No observations.</p>}{data && table ? <AuditTable records={data.observations} busy={busy} onInvalidate={invalidate}/> : data?.observations.filter(a => a.id !== found?.id).map(a => <AuditRecord key={a.id} record={a} busy={busy} onInvalidate={invalidate}/>)}</section>;
+}
+function price(record: Audit, amount: number | undefined) { return amount === undefined ? 'Missing' : formatPrice(amount, record.observation.currency!); }
+export function AuditTable({ records, busy, onInvalidate }: { records: Audit[]; busy: boolean; onInvalidate: (id: string, reason: string) => Promise<void> }) {
+    return <div style={{ overflowX: 'auto' }}><table><caption>Observation history audit — newest first, including invalidated facts. Charts and current prices exclude invalidated observations.</caption>
+        <thead><tr>{['Observed time','Offer price','Sale price','Retailer list price','MSRP','Currency','Stock','Source / provenance','Validity','Detail'].map(label => <th scope="col" key={label}>{label}</th>)}</tr></thead>
+        <tbody>{records.map(a => { const o=a.observation; return <tr key={a.id}>
+            <td>{o.observed_at}</td><td>{price(a,o.offer_price)}</td><td>{price(a,o.sale_price)}</td><td>{price(a,o.retailer_list_price)}</td><td>{price(a,o.msrp)}</td><td>{o.currency || 'Missing'}</td><td>{o.stock.replaceAll('_',' ')}</td><td style={{whiteSpace:'pre-wrap'}}>{o.source}</td><td>{a.valid?'Valid':'Invalidated'}</td><td><AuditRecord record={a} busy={busy} onInvalidate={onInvalidate}/></td>
+        </tr>; })}</tbody>
+    </table></div>;
 }
 export function AuditRecord({ record: a, busy, onInvalidate }: {
     record: Audit;
     busy: boolean;
     onInvalidate: (id: string, reason: string) => Promise<void>;
-}) { return <details><summary>{a.id} · {a.observation.observed_at} · {a.valid ? 'Valid' : 'Invalidated'}</summary><pre>{JSON.stringify(a.observation, null, 2)}</pre>{a.valid ? <form onSubmit={e => { e.preventDefault(); const reason = String(new FormData(e.currentTarget).get('reason') || ''); void onInvalidate(a.id, reason); }}><label>Reason <input name="reason" required maxLength={1000}/></label> <button disabled={busy}>Invalidate observation</button></form> : <p>Invalidated: {a.invalidated_at} · Reason: {a.invalidation_reason}</p>}</details>; }
+}) { const o=a.observation; return <details><summary>{a.id} · {o.observed_at} · {a.valid ? 'Valid' : 'Invalidated'}</summary><dl>
+ <dt>Observation ID</dt><dd>{a.id}</dd><dt>Listing ID</dt><dd>{a.listing_id}</dd><dt>Observed timestamp</dt><dd>{o.observed_at}</dd>
+ <dt>Offer price</dt><dd>{price(a,o.offer_price)}</dd><dt>Sale price</dt><dd>{price(a,o.sale_price)}</dd><dt>Retailer list price</dt><dd>{price(a,o.retailer_list_price)}</dd><dt>MSRP</dt><dd>{price(a,o.msrp)}</dd><dt>MSRP source / evidence</dt><dd style={{whiteSpace:'pre-wrap'}}>{o.msrp_source || 'Missing'}</dd>
+ <dt>Currency</dt><dd>{o.currency || 'Missing'}</dd><dt>Stock</dt><dd>{o.stock.replaceAll('_',' ')}</dd><dt>Source / provenance</dt><dd style={{whiteSpace:'pre-wrap'}}>{o.source}</dd>
+ </dl>{a.valid ? <form onSubmit={e => { e.preventDefault(); const reason = String(new FormData(e.currentTarget).get('reason') || ''); void onInvalidate(a.id, reason); }}><label>Reason <input name="reason" required maxLength={1000}/></label> <button disabled={busy}>Invalidate observation</button></form> : <p style={{whiteSpace:'pre-wrap'}}>Invalidated: {a.invalidated_at} · Reason: {a.invalidation_reason}</p>}</details>; }

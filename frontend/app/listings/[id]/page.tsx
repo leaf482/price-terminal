@@ -40,7 +40,7 @@ export default async function ListingPage({ params }: { params: Promise<{ id: st
         <RecordPrice listingID={l.id}/><CSVImport listingID={l.id}/><CSVExport listingID={l.id}/>
         {/* Refresh client reads even for backdated imports or newly invalidated facts. */}
         <HistoryView key={`history-${revision}`} listings={[{ id: l.id, retailer: retailer?.name || l.retailer_id }]}/>
-        <QualityView key={`quality-${revision}`} listingID={l.id}/>
+        <QualityView key={`quality-${revision}`} listingID={l.id} table/>
         <PromotionView key={`promotion-${revision}`} listingID={l.id}/>
         <AlertView key={`alerts-${revision}`} listingID={l.id}/>
     </main>;
