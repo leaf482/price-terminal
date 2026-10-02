@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
-      <body><nav aria-label="Main navigation"><Link href="/">Products</Link> · <Link href="/catalog">Catalog</Link> · <Link href="/alerts">Alerts</Link></nav><GlobalSearch/>{children}</body>
+      <body><nav aria-label="Main navigation"><Link href="/">Products</Link> · <Link href="/catalog">Catalog</Link> · <Link href="/alerts">Alerts</Link> · <Link href="/collection">Collection</Link></nav><GlobalSearch/>{children}</body>
     </html>
   );
 }
