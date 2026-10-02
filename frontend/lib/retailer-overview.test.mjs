@@ -30,6 +30,7 @@ test('Retailer overview renders independent prices/status and combined filters',
  const h=load('../app/retailers/[id]/overview.tsx');let tree=h.render();const html=renderToStaticMarkup(tree);
  for(const text of ['Camera','Acme','Alpha','USD 0.00','Price unavailable','Tracking: disabled','Collection: failed','2026-01-01T00:00:00Z','2026-10-01T00:00:00Z','stale','first 100','2 of 2'])assert.ok(html.includes(text),text);
  assert.match(html,/href="\/products\/constructor#constructor"/);
+ assert.match(html,/href="\/listings\/constructor"/);
  nodes(tree).find(n=>n.type==='input').props.onChange({target:{value:'Beta'}});tree=h.render();assert.equal(nodes(tree).filter(n=>n.type==='article').length,1);
  nodes(tree).find(n=>n.type==='select').props.onChange({target:{value:'priced'}});assert.match(renderToStaticMarkup(h.render()),/No Listings match/);
  assert.match(renderToStaticMarkup(h.render({...data,listings:[]})),/No Listings for this Retailer/);

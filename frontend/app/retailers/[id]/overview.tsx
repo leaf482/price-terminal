@@ -13,7 +13,7 @@ export default function Overview({ data }: { data: RetailerOverview }) {
         {!data.listings.length ? <p>No Listings for this Retailer.</p> : !rows.length ? <p>No Listings match this search and filter.</p> : <div className="grid">{rows.map(({ product: p, current: c }) => {
             const price = basis(c.observation), url = safeSource(c.listing.url);
             return <article className="panel" key={c.listing.id}><h2><Link href={`/products/${encodeURIComponent(p.id)}#${encodeURIComponent(c.listing.id)}`}>{p.name || p.id}</Link></h2>
-                <p>{p.brand} · {p.model} · Product ID: {p.id}{p.archived && ' · Archived Product'}</p><p>Listing: {c.listing.id}</p>
+                <p>{p.brand} · {p.model} · Product ID: {p.id}{p.archived && ' · Archived Product'}</p><p><Link href={`/listings/${encodeURIComponent(c.listing.id)}`}>Listing: {c.listing.id}</Link></p>
                 {url && <a href={url} target="_blank" rel="noreferrer">{c.listing.url}</a>}
                 <p>Tracking: {c.listing.tracking_enabled === false ? 'disabled' : 'enabled'}</p>
                 <p>Observed price: {price ? formatPrice(price.amount, price.currency) : 'Price unavailable'} · {price?.label || 'No offer or sale price'}</p>

@@ -138,10 +138,14 @@ export function parseHistory(x: unknown): History {
         throw new Error("Invalid change");
     return v as History;
 }
+export class APIError extends Error {
+    readonly status: number;
+    constructor(status: number) { super(`Request failed (${status}). Check the backend and database.`); this.status = status; }
+}
 export async function api<T>(path: string, parse: (x: unknown) => T, signal?: AbortSignal): Promise<T> {
     const base = typeof window === "undefined" ? backendURL(process.env.BACKEND_URL) : "/api";
     const response = await fetch(`${base}${path}`, { cache: "no-store", signal: signal || AbortSignal.timeout(10000) });
     if (!response.ok)
-        throw new Error(`Request failed (${response.status}). Check the backend and database.`);
+        throw new APIError(response.status);
     return parse(object(await response.json()).data);
 }

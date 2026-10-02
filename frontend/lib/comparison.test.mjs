@@ -64,6 +64,7 @@ test('comparison cards retain status, best-price contract, promotion separation 
  const rows=[{...usd,freshness:'stale',collection:{state:'failed'},observation:{...usd.observation,stock:'out_of_stock'}},{...zero,listing:{...zero.listing,tracking_enabled:false}},missing,jpy];
  const data={product_id:'p',listings:rows,best_price:null,comparison_status:'incompatible_currencies'},render=load();
  let tree=render(data),html=renderToStaticMarkup(tree);
+ assert.match(html,/href="\/listings\/a"/);
  for(const text of ['Alpha','Observed current price','USD 0.00','Price unavailable','out of stock','Tracking: disabled','Collection: failed','Observation freshness: stale','incompatible currencies','Conditional savings are not guaranteed','EffectivePrice are excluded'])assert.ok(html.includes(text),text);
  for(const control of ['promotion-view','alert-view','record-price','quality-view','csv-import','csv-export','tracking-controls','collection-controls'])assert.match(html,new RegExp('data-control="./'+control+'"'));
  for(const mode of ['price_asc','price_desc','newest','retailer']){nodes(tree).find(n=>n.type==='select').props.onChange({target:{value:mode}});tree=render(data);assert.deepEqual(nodes(tree).filter(n=>n.type==='article').map(n=>n.props.id),comparison.sortListings(rows,mode,names).map(r=>r.listing.id))}
