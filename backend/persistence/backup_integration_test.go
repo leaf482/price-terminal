@@ -7,6 +7,7 @@ import (
 	"crypto/rand"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/stdlib"
+	"github.com/leaf482/price-terminal/backend/domain"
 	"github.com/leaf482/price-terminal/backend/persistence"
 	"os"
 	"os/exec"
@@ -27,6 +28,17 @@ func TestDockerBackupRestore(t *testing.T) {
 	s := seedReliability(t, ctx, source)
 	if _, err := s.InvalidateObservation(ctx, "bad", "backup verification"); err != nil {
 		t.Fatal(err)
+	}
+	// Exercise non-default catalog state and durable operational history too.
+	for _, err := range []error{
+		s.SetProductArchived(ctx, "p", true),
+		s.SetListingTracking(ctx, "l", false),
+		s.InsertCollectionAttempt(ctx, domain.CollectionAttempt{ID: "backup-success", ListingID: "l", Trigger: "manual", StartedAt: time.Unix(3, 0), FinishedAt: time.Unix(4, 0), Outcome: "success", ObservationID: "old"}),
+		s.InsertCollectionAttempt(ctx, domain.CollectionAttempt{ID: "backup-failure", ListingID: "l", Trigger: "scheduled", StartedAt: time.Unix(5, 0), FinishedAt: time.Unix(6, 0), Outcome: "provider_error", ErrorSummary: "provider_error"}),
+	} {
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 	var sourceName string
 	if err := source.QueryRowContext(ctx, `SELECT current_database()`).Scan(&sourceName); err != nil {
@@ -74,7 +86,7 @@ func TestDockerBackupRestore(t *testing.T) {
 	restored := stdlib.OpenDB(*config)
 	t.Cleanup(func() { restored.Close() })
 	// Compare all columns of every application table and Goose history, not just counts.
-	for _, table := range []string{"products", "retailers", "listings", "price_observations", "promotions", "price_alerts", "price_alert_events", "observation_invalidations", "goose_db_version"} {
+	for _, table := range []string{"products", "retailers", "listings", "price_observations", "promotions", "price_alerts", "price_alert_events", "observation_invalidations", "collection_attempts", "goose_db_version"} {
 		query := `SELECT COALESCE(jsonb_agg(to_jsonb(t) ORDER BY to_jsonb(t)::text),'[]'::jsonb)::text FROM ` + pgx.Identifier{table}.Sanitize() + ` t`
 		var original, copy string
 		if err := source.QueryRowContext(ctx, query).Scan(&original); err != nil {

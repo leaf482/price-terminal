@@ -139,12 +139,11 @@ Remove-Item Env:BACKUP_VERIFY
 `TestDockerBackupRestore` creates a fresh migrated source database, seeds catalog,
 observations, promotions, alerts/events and invalidation state, then dumps it and
 restores into a different empty database. It compares every column of every row
-in the eight original application tables plus Goose history, verifies the valid current
+in all nine application tables plus Goose history, verifies the valid current
 price, and runs migrate-up on the restored metadata. Test cleanup removes both
 databases and the temporary archive even after failures. The normal development
 database is used only for administrative database creation, never overwritten.
-Migration 9 adds the ninth application table, `collection_attempts`. A full
-database dump includes that table too, but this seeded test does not yet seed or
-compare attempt rows explicitly. That coverage remains deferred. Persistent
-attempt history survives backup/restore; process-local latest collection status
-and counters reset on restart and are not part of the backup.
+The seed includes archived Product/disabled Listing state and both successful and
+failed collection attempts, including a successful observation reference.
+Persistent attempt history survives backup/restore; process-local latest
+collection status and counters reset on restart and are not part of the backup.

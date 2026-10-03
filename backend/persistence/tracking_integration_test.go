@@ -30,14 +30,14 @@ func TestTrackingPersistenceIntegration(t *testing.T) {
 	if err := db.QueryRowContext(ctx, `SELECT current_database()`).Scan(&name); err != nil {
 		t.Fatal(err)
 	}
-	migrate := func(action string) {
+	migrate := func(actions ...string) {
 		t.Helper()
-		out, err := exec.CommandContext(ctx, "goose", "-env", "none", "-dir", "../migrations", "postgres", "dbname="+name, action).CombinedOutput()
+		out, err := exec.CommandContext(ctx, "goose", append([]string{"-env", "none", "-dir", "../migrations", "postgres", "dbname=" + name}, actions...)...).CombinedOutput()
 		if err != nil {
-			t.Fatalf("%s: %v %s", action, err, out)
+			t.Fatalf("%v: %v %s", actions, err, out)
 		}
 	}
-	migrate("down")
+	migrate("down-to", "6")
 	if _, err := db.ExecContext(ctx, `INSERT INTO listings(id,product_id,retailer_id,url,retailer_product_id) VALUES('l','p','r','https://example.com/l','sku')`); err != nil {
 		t.Fatal(err)
 	}
@@ -62,7 +62,7 @@ func TestTrackingPersistenceIntegration(t *testing.T) {
 	if err := s.EvaluateAlerts(ctx, "first"); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.InsertPromotion(ctx, domain.Promotion{ID: "promotion", ListingID: "l", ObservedAt: at, Source: "fixture", Kind: "fixed", Amount: money, Requirement: "none", Stacking: "allowed"}); err != nil {
+	if err := s.InsertPromotion(ctx, domain.Promotion{ID: "promotion", ListingID: "l", ObservedAt: at, Source: "fixture", Terms: "explicit zero discount", Kind: "fixed", Amount: money, Requirement: "none", Stacking: "allowed"}); err != nil {
 		t.Fatal(err)
 	}
 	for _, enabled := range []bool{false, false, true, false} {
