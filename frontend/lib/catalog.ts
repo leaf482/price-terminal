@@ -1,3 +1,4 @@
+import { jsonRequest } from './json-request.ts';
 export type Retailer = {
     id: string;
     name: string;
@@ -35,7 +36,7 @@ export function catalogBody(kind: CatalogKind, form: FormData): Record<string, s
     return body;
 }
 export async function postCatalog(path: string, body?: Record<string, string>): Promise<void> {
-    const response = await fetch(`/api${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body), signal: AbortSignal.timeout(30000) });
+    const response = await jsonRequest(`/api${path}`, 'POST', body, 30000);
     if (response.ok)
         return;
     const payload = await response.json().catch(() => null);

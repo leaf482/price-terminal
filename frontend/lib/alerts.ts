@@ -1,3 +1,4 @@
+import { jsonRequest } from './json-request.ts';
 import type { Currency } from './api.ts';
 export type Alert = {
     id: string;
@@ -70,5 +71,5 @@ export function alertBody(kind: Alert['kind'], currency: Currency, value: string
     if (body.drop_basis_points < 1 || body.drop_basis_points > 10000)
         throw new Error('Drop must be 0.01–100%');
 } ; return body; }
-export async function saveAlert(listing: string, body: unknown, id?: string): Promise<Alert> { const path = `/api/listings/${encodeURIComponent(listing)}/alerts${id ? '/' + encodeURIComponent(id) : ''}`; const response = await fetch(path, { method: id ? 'PATCH' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(10000) }); if (!response.ok)
+export async function saveAlert(listing: string, body: unknown, id?: string): Promise<Alert> { const path = `/api/listings/${encodeURIComponent(listing)}/alerts${id ? '/' + encodeURIComponent(id) : ''}`; const response = await jsonRequest(path, id ? 'PATCH' : 'POST', body); if (!response.ok)
     throw new Error(`Could not save alert (${response.status})`); return parseAlert(obj(await response.json()).data); }

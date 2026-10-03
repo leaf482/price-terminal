@@ -1,3 +1,4 @@
+import { jsonRequest } from './json-request.ts';
 import { parseObservation, type Observation } from './api.ts';
 export type Audit = {
     id: string;
@@ -26,7 +27,7 @@ export function parseAuditList(value: unknown): AuditList { if (!value || typeof
 export async function invalidateObservation(id: string, reason: string): Promise<void> {
     if (!reason.trim() || [...reason].length > 1000)
         throw new Error('Provide a reason of 1–1000 characters.');
-    const r = await fetch(`/api/observations/${encodeURIComponent(id)}/invalidate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason }), signal: AbortSignal.timeout(10000) });
+    const r = await jsonRequest(`/api/observations/${encodeURIComponent(id)}/invalidate`, 'POST', { reason });
     if (!r.ok)
         throw new Error(r.status === 404 ? 'Observation not found.' : 'Could not invalidate observation. Check the reason and backend.');
 }

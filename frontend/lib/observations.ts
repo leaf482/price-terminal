@@ -1,3 +1,4 @@
+import { jsonRequest } from './json-request.ts';
 import { decimalUnits } from './alerts.ts';
 
 export function observationBody(form: FormData, id: string) {
@@ -20,9 +21,7 @@ export function observationBody(form: FormData, id: string) {
 }
 
 export async function recordObservation(listing: string, body: ReturnType<typeof observationBody>) {
-    const response = await fetch(`/api/listings/${encodeURIComponent(listing)}/observations`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(10000),
-    });
+    const response = await jsonRequest(`/api/listings/${encodeURIComponent(listing)}/observations`, 'POST', body);
     if (response.ok) return;
     const payload = await response.json().catch(() => null);
     throw new Error(payload?.error?.message || `Unable to record observation (${response.status}).`);
