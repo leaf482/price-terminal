@@ -3,7 +3,7 @@ import AttemptHistory from './attempt-history';
 import { notFound } from 'next/navigation';
 import { randomUUID } from 'node:crypto';
 import { loadListingDetail } from '../../../lib/listing-detail';
-import { basis, formatPrice, safeSource } from '../../../lib/prices';
+import { basis, displayPrice as formatPrice, safeSource } from '../../../lib/prices';
 import CollectionControls from '../../products/[id]/collection-controls';
 import TrackingControls from '../../products/[id]/tracking-controls';
 import RecordPrice from '../../products/[id]/record-price';

@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { filterProducts, type DashboardData, type Filter, type Summary } from '../lib/dashboard';
-import { formatPrice } from '../lib/prices';
+import { displayPrice as formatPrice } from '../lib/prices';
 
 function counts(values: Record<string, number>) {
     return Object.entries(values).sort(([a], [b]) => a.localeCompare(b)).map(([label, n]) => `${n} ${label.replaceAll('_', ' ')}`).join(' · ') || 'No Listings';

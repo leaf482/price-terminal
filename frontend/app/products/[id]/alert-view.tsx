@@ -38,7 +38,7 @@ export default function AlertView({ listingID }: {
  {kind !== 'historical_low' && <label>{kind === 'target' ? 'Target amount' : 'Drop percentage'} <input required inputMode="decimal" value={value} onChange={e => setValue(e.target.value)}/></label>}<br />
  <label><input type="checkbox" checked={stock} onChange={e => setStock(e.target.checked)}/>Require in-stock observations</label><p><button disabled={busy || !data}>Create alert</button> <button type="button" disabled={busy} onClick={() => setRefresh(v => v + 1)}>Refresh alerts/events</button></p></form>
  {error && <p role="alert">{error}</p>}{!data && !error && <p role="status">Loading alerts…</p>}
- {data && <><h5>Configured alerts</h5>{!data.alerts.length && <p>No alerts configured.</p>}<ul>{data.alerts.map(a => <li key={a.id}><AlertConditions alert={a}/> · {a.enabled ? 'Enabled' : 'Disabled'} <button disabled={busy} onClick={() => void save({ enabled: !a.enabled }, a.id)}>{a.enabled ? 'Disable' : 'Enable'}</button></li>)}</ul><EventList data={data.events}/></>}
+ {data && <><h5>Configured alerts</h5>{!data.alerts.length && <p>No alerts configured.</p>}<ul>{data.alerts.map(a => <li key={a.id}><AlertConditions alert={a}/> · {a.enabled ? 'Enabled' : 'Disabled'} <button aria-label={`${a.enabled ? "Disable" : "Enable"} alert ${a.id}`} disabled={busy} onClick={() => void save({ enabled: !a.enabled }, a.id)}>{a.enabled ? 'Disable' : 'Enable'}</button></li>)}</ul><EventList data={data.events}/></>}
  </section>;
 }
 export function AlertConditions({ alert: a }: {

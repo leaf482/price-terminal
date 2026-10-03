@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { filterRetailerListings, type RetailerOverview, type RetailerFilter } from '../../../lib/retailer-overview';
-import { basis, formatPrice, safeSource } from '../../../lib/prices';
+import { basis, displayPrice as formatPrice, safeSource } from '../../../lib/prices';
 export default function Overview({ data }: { data: RetailerOverview }) {
     const [query, setQuery] = useState(''), [filter, setFilter] = useState<RetailerFilter>('all');
     const rows = filterRetailerListings(data.listings, query, filter);

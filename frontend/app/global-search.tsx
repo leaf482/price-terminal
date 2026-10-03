@@ -19,7 +19,7 @@ export default function GlobalSearch() {
         {busy && <p role="status">Searching…</p>}{error && <p role="alert">{error}</p>}
         {data && <>
             {!data.products.length && !data.retailers.length && !data.listings.length && <p role="status">No matching catalog records.</p>}
-            <h2>Products</h2><ul>{data.products.map(p => <li key={p.id}><Link href={`/products/${encodeURIComponent(p.id)}`}>{p.name || p.id}</Link> · ID: {p.id} · {p.brand} {p.model}{p.archived && ' · Archived'}</li>)}</ul>
+            <p role="status">{data.products.length + data.retailers.length + data.listings.length} catalog results.</p><h2>Products</h2><ul>{data.products.map(p => <li key={p.id}><Link href={`/products/${encodeURIComponent(p.id)}`}>{p.name || p.id}</Link> · ID: {p.id} · {p.brand} {p.model}{p.archived && ' · Archived'}</li>)}</ul>
             <h2>Retailers</h2><ul>{data.retailers.map(r => <li key={r.id}><Link href={`/retailers/${encodeURIComponent(r.id)}`}>{r.name || r.id}</Link> · ID: {r.id}</li>)}</ul>
             <h2>Listings</h2><ul>{data.listings.map(l => <li key={l.id}><Link href={`/listings/${encodeURIComponent(l.id)}`}>{l.id}</Link> · Product: {l.product_id} · Retailer: {l.retailer_id} · {l.url} · SKU: {l.retailer_product_id || 'not supplied'}{!l.tracking_enabled && ' · Tracking disabled'}</li>)}</ul>
         </>}

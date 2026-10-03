@@ -1,10 +1,16 @@
 import type { Currency, Observation } from "./api.ts";
 // Storage and formatting stay in integer minor units. Only SVG coordinates use floats.
 export function formatPrice(amount: number, currency: Currency): string {
-    if (!Number.isSafeInteger(amount) || amount < 0)
+    if (!Number.isSafeInteger(amount) || amount < 0 || !['USD', 'JPY'].includes(currency))
         throw new Error("Invalid exact amount");
     const value = BigInt(amount), scale = currency === "USD" ? BigInt(100) : BigInt(1);
     return `${currency} ${value / scale}${currency === "USD" ? "." + (value % scale).toString().padStart(2, "0") : ""}`;
+}
+// Rendering boundary only: retain validation errors visibly, never turn bad
+// data into zero or a plausible price. Domain/API parsers remain strict.
+export function displayPrice(amount: number, currency: Currency): string {
+    try { return formatPrice(amount, currency); }
+    catch { return 'Invalid price data'; }
 }
 export function basis(o: Observation | null) { return o?.offer_price !== undefined ? { amount: o.offer_price, label: "Offer price", currency: o.currency! } : o?.sale_price !== undefined ? { amount: o.sale_price, label: "Sale price", currency: o.currency! } : null; }
 export function historyPoints(rows: Observation[]) {

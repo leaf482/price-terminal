@@ -30,3 +30,28 @@ svg { width: 100%; height: auto; overflow: visible; }
 svg text { font-size: 11px; }
 .axis { display: flex; justify-content: space-between; gap: 1rem; font-size: .75rem; overflow-wrap: anywhere; }
 details ol { max-height: 22rem; overflow: auto; padding-left: 1.5rem; }
+
+/* Shared presentation utilities; semantic distinctions remain in visible text. */
+* { box-sizing: border-box; }
+main, section, article { min-width: 0; overflow-wrap: anywhere; }
+.primary-nav { display: flex; flex-wrap: wrap; gap: .5rem 1rem; padding: .75rem 1.5rem; }
+.primary-nav a { padding: .25rem; }
+input, textarea { font: inherit; max-width: 100%; padding: .4rem; }
+label { display: inline-block; max-width: 100%; margin: .25rem .5rem .25rem 0; }
+button { min-height: 2.75rem; max-width: 100%; margin: .25rem; }
+button:disabled { cursor: not-allowed; opacity: .65; }
+:focus-visible { outline: 3px solid #1d4ed8; outline-offset: 3px; }
+.skip-link { position: absolute; left: 1rem; top: -10rem; background: white; padding: .75rem; z-index: 10; }
+.skip-link:focus { top: .5rem; }
+.table-scroll { max-width: 100%; overflow-x: auto; margin-block: 1rem; }
+table { border-collapse: collapse; width: 100%; }
+th, td { text-align: left; vertical-align: top; padding: .65rem; border-bottom: 1px solid #ccc; }
+th { background: #eee; }
+[role="alert"] { border-left: 3px solid #a00; padding-left: .75rem; }
+[role="status"] { overflow-wrap: anywhere; }
+@media (max-width: 40rem) {
+  main { margin: 2rem auto; padding-inline: .75rem; }
+  .primary-nav { padding-inline: .75rem; }
+  .panel { padding: .75rem; }
+  .controls { gap: .75rem; }
+}
