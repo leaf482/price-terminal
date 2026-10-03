@@ -2,18 +2,12 @@ package main
 
 import (
 	"context"
-	"database/sql"
-	"encoding/json"
 	"errors"
-	"io"
 	"net/http"
-	"net/url"
-	"strconv"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/leaf482/price-terminal/backend/domain"
-	"github.com/leaf482/price-terminal/backend/persistence"
 )
 
 type catalogStore interface {
@@ -54,42 +48,6 @@ func registerCatalogRoutes(mux *http.ServeMux, store catalogStore) {
 	mux.HandleFunc("POST /listings", api.createListing)
 	mux.HandleFunc("GET /listings/{id}", api.getListing)
 	mux.HandleFunc("GET /products/{productID}/listings", api.listListings)
-}
-
-// Catalog bodies follow the Product API's size and single-object rules.
-func decodeCatalogBody(w http.ResponseWriter, r *http.Request, dst any) error {
-	r.Body = http.MaxBytesReader(w, r.Body, 64*1024)
-	decoder := json.NewDecoder(r.Body)
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(dst); err != nil {
-		return err
-	}
-	if err := decoder.Decode(new(any)); err != io.EOF {
-		return errors.New("expected one JSON object")
-	}
-	return nil
-}
-
-func catalogLimit(w http.ResponseWriter, r *http.Request) (int, bool) {
-	query, err := url.ParseQuery(r.URL.RawQuery)
-	limit := 50
-	values := query["limit"]
-	if err == nil && len(values) > 0 {
-		limit, err = strconv.Atoi(values[0])
-	}
-	if err != nil || len(values) > 1 || limit < 1 || limit > persistence.MaxCatalogListLimit {
-		productError(w, 400, "invalid_limit", "limit must be an integer from 1 to 100")
-		return 0, false
-	}
-	return limit, true
-}
-
-func catalogReadError(w http.ResponseWriter, err error, resource string) {
-	if errors.Is(err, sql.ErrNoRows) {
-		productError(w, 404, resource+"_not_found", resource+" not found")
-	} else {
-		productError(w, 500, "internal_error", "unable to read "+resource)
-	}
 }
 
 func (api catalogAPI) createRetailer(w http.ResponseWriter, r *http.Request) {
