@@ -17,3 +17,7 @@ npm-debug.log*
 # Local PostgreSQL backup artifacts
 /backups/
 *.dump
+
+# Local downloaded audit exports; committed fixtures elsewhere remain allowed
+/listing-observations.csv
+/frontend/listing-observations.csv

@@ -2,7 +2,8 @@
 
 ## Observation validity
 
-Apply migration 6 before running this version. `observation_invalidations` has
+Apply all pending migrations before running this version (currently through 9).
+Migration 6 introduced `observation_invalidations`, which has
 one row per observation, a nonblank reason (at most 1000 characters), and the
 database-recorded invalidation time. The original `price_observations` row is
 never updated/deleted. Repeating an invalidation returns the first reason/time;
@@ -138,9 +139,12 @@ Remove-Item Env:BACKUP_VERIFY
 `TestDockerBackupRestore` creates a fresh migrated source database, seeds catalog,
 observations, promotions, alerts/events and invalidation state, then dumps it and
 restores into a different empty database. It compares every column of every row
-in all eight application tables plus Goose history, verifies the valid current
+in the eight original application tables plus Goose history, verifies the valid current
 price, and runs migrate-up on the restored metadata. Test cleanup removes both
 databases and the temporary archive even after failures. The normal development
 database is used only for administrative database creation, never overwritten.
-Collection attempt/success/error counters reset on restart and are deliberately
-not claimed to survive pg_dump. No persistent collection table exists.
+Migration 9 adds the ninth application table, `collection_attempts`. A full
+database dump includes that table too, but this seeded test does not yet seed or
+compare attempt rows explicitly. That coverage remains deferred. Persistent
+attempt history survives backup/restore; process-local latest collection status
+and counters reset on restart and are not part of the backup.

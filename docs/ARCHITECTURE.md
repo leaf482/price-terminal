@@ -2,7 +2,7 @@
 
 ## Initial system
 
-Use a Next.js frontend, a Go backend, and PostgreSQL in one repository. This is a planned architecture; no application setup is part of Task 0.
+The implemented MVP uses Next.js, Go, and PostgreSQL in one repository. Manual entry and CSV import are the usable observation inputs. Only a deterministic Fake provider exists; real adapters remain blocked pending source approval (Price API: NEEDS CLARIFICATION).
 
 ```text
 Browser -> Next.js frontend -> Go API -> PostgreSQL
@@ -19,7 +19,7 @@ The frontend renders catalog, current prices, history, promotion explanations, a
 
 ## Codebase and process boundaries
 
-The API and collector may run as separate Go binaries while sharing one codebase and domain packages. This allows collection work to have a separate lifecycle and resource budget from user-facing requests without introducing independent services, network protocols, or repositories.
+The API and collector currently run in one Go process. They may later run as separate Go binaries while sharing one codebase and domain packages. This allows collection work to have a separate lifecycle and resource budget from user-facing requests without introducing independent services, network protocols, or repositories.
 
 Keep logical boundaries for domain rules, application operations, persistence, HTTP handling, and providers. Package structure should follow actual needs rather than a large framework prepared in advance. Do not implement every future boundary during bootstrap.
 
@@ -29,12 +29,12 @@ User-facing reads use persisted data; they should not need a live retailer reque
 
 A Provider adapts one source to the collection contract. It may use an official API or another permitted collection method. A Retailer is a business/domain identity; it is not the same thing as a Provider implementation, and their relationship need not always be one-to-one.
 
-The contract should accept a listing/source reference and cancellation/deadline context, then return normalized observed facts with provenance or an explicit collection error. Exact Go interfaces will be defined in the provider task.
+The contract should accept a listing/source reference and cancellation/deadline context, then return normalized observed facts with provenance or an explicit collection error. The implemented `provider.Provider.Collect(context.Context, domain.Listing)` returns a validated `domain.PriceObservation` or an error.
 
 Provider responsibilities:
 
 - Fetch source data within configured access and rate limits.
-- Parse prices, currency, stock state, and supported promotion facts without inventing missing values.
+- Parse prices, currency, and stock state without inventing missing values. Promotion evidence currently enters through separate APIs/forms, not the Provider contract.
 - Identify source references, observation time, and adapter identity/version where needed for diagnosis.
 - Distinguish unavailable fields from collection errors and expose meaningful error categories.
 
@@ -42,18 +42,18 @@ Shared ingestion responsibilities:
 
 - Validate results against domain invariants and listing identity.
 - Persist complete, accepted observations atomically.
-- Handle delivery retries without duplicating the same collection result.
+- Preserve caller-assigned result identity: retrying an inserted ID yields a conflict, never a duplicate observation. There is no automatic retry loop.
 - Record collection outcomes separately from pricing facts.
 
 Providers do not write directly to the database or define shared EffectivePrice rules. A deterministic fake provider proves the contract before a real integration is introduced. Fixture-based tests keep routine verification independent of live retailer availability.
 
 ## Failure isolation
 
-Bound provider calls with timeouts, cancellation, limited concurrency, and source-specific rate limits. Contain failures per collection attempt/listing and continue unrelated work; apply provider-level backoff when failures affect a whole source. Keep API reads independent of provider health.
+The runtime processes bounded batches sequentially, with per-Listing timeouts, cancellation, and overlap guards. Failures remain per Listing; API reads are independent of provider health. Source-specific rate limiting/backoff is deferred until real adapters justify it.
 
-A failed request, parser error, or blocked source produces an operational failure record, not a fabricated zero price or out-of-stock PriceObservation. Keep the last accepted observation available with its original timestamp and visible freshness. Do not let an old price appear current merely because a retry occurred.
+Started collection attempts produce best-effort durable CollectionAttempt metadata, not fabricated zero prices or out-of-stock observations. Rejected preflight requests and unstarted work do not create attempt rows; crashes or failed metadata writes can leave audit gaps. Keep the last accepted observation available with its original timestamp and visible freshness. Do not let an old price appear current merely because a retry occurred.
 
-Use bounded retries for transient failures and avoid immediate retry loops for persistent parsing or access failures. More advanced isolation, such as a circuit breaker or separate provider workers, is justified only by recurring failure patterns. Establish basic isolation before the first real provider; expand diagnostics and recovery in reliability tasks.
+No automatic retries are implemented. Any future bounded retry policy requires a separately reviewed task. More advanced isolation, such as a circuit breaker or separate provider workers, is justified only by recurring failure patterns. Establish basic isolation before the first real provider; expand diagnostics and recovery in reliability tasks.
 
 ## Observed facts and derived data
 

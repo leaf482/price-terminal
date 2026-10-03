@@ -6,6 +6,16 @@ Execute tasks in order unless review explicitly revises the sequence. Each task 
 
 The criteria below are intentionally short. Refine each against the current repository before starting, and split it further if needed. They do not authorize future work or select unnecessary implementation details. All price-related work follows [DOMAIN_MODEL.md](DOMAIN_MODEL.md).
 
+## Current status
+
+Tasks 0–45 have implementation/research artifacts in the repository; this does
+not assert that every environment-dependent check has run on this machine.
+Task 25 stopped at research: no real adapter exists, and Price API remains
+NEEDS CLARIFICATION. Manual/CSV input is usable. Task 46 is the final accuracy/QA
+pass. PostgreSQL-dependent verification requires an available local database.
+The numbered entries below record the actual user-directed tasks; acceptance
+criteria describe their scope, not a queue to reimplement completed features.
+
 ## Documentation and foundation
 
 ### Task 0: Documentation bootstrap
@@ -144,54 +154,67 @@ Acceptance: import a bounded CSV of observations for one Listing; validate all r
 
 Acceptance: support target-price, percentage-drop, and historical-low alerts on observed offer/sale prices; persist configuration and durable events. Evaluate after successful ingestion without invalidating observations on evaluation failure. Enforce currency, missing-price, stock, and first-observation rules; suppress duplicate alert/observation events while allowing later qualifying events. Add bounded APIs and frontend create/list/enable/disable/event views. Verify domain, ingestion, persistence, API, frontend, and migration behavior. Promotions/EffectivePrice, external delivery, auth, and generic rule engines are excluded.
 
-### Tasks 30–32 and 34: Covered by Task 22
+## Catalog, audit, and global views (implemented)
 
-The combined MVP includes alert model/persistence, configuration API, evaluation, and frontend controls.
+### Task 30: Observation CSV export
+Acceptance: bounded deterministic audit export includes invalidated facts; over-limit requests fail without silent truncation.
 
-### Task 33: Removed from project scope
+### Task 31: Safe catalog metadata editing
+Acceptance: edit Product descriptions and Retailer names while Listing source identity remains immutable.
 
-There is no external notification delivery: no email, SMS, push, webhooks, delivery attempts, or delivery retries. Triggered events are stored and viewed in the application only.
+### Task 32: Product archive state
+Acceptance: archive affects default visibility only; histories and Listing tracking remain unchanged.
 
-## Additional providers and reliability
+### Task 33: Product Listing comparison
+Acceptance: compare observed prices with deterministic currency grouping; keep derived EffectivePrice separate.
 
-### Task 35: Second provider
+### Task 34: Retailer detail and Listing overview
+Acceptance: bounded metadata/current-state overview without per-Listing database reads.
 
-Acceptance: add one independently tested provider through the existing contract, with documented supported contexts and limitations. Verify failures remain isolated; revise the abstraction only for demonstrated differences.
+### Task 35: Dedicated Listing detail
+Acceptance: compose existing history, audit, promotions, alerts, tracking and input controls with catalog navigation.
 
-### Task 36: Collection retry and rate-limit hardening
+### Task 36: Global catalog search
+Acceptance: bounded parameterized Product/Retailer/Listing substring search with safe unusual IDs.
 
-Acceptance: refine backoff and source-specific rate behavior using actual provider failure categories; verify restart and repeated-failure behavior without unbounded retries.
+### Task 37: Global alert overview
+Acceptance: contextual alert management and recent events without per-alert catalog queries or delivery infrastructure.
 
-### Task 37: Operational visibility
+### Task 38: Observation history table and audit detail
+Acceptance: bounded audit table includes original facts and invalidation state without changing chart semantics.
 
-Initial scope covered by Task 24: collection/alert-evaluation outcomes, timing and failure diagnostics, a health-check procedure, and safe logs. Broader monitoring requires a separate task.
+### Task 39: Persistent collection attempts
+Acceptance: separate operational attempt history, safe outcomes, and manual/scheduled recording; metadata failure cannot undo observations.
 
-### Task 38: Data-quality handling
+### Task 40: Global collection health
+Acceptance: bounded overview with separate observation freshness, attempt state, filtering, and full-precision timestamp sorting.
 
-Covered by Task 24: invalidation without modifying original facts, explicit query/alert treatment, and retained historical evidence.
+### Task 41: Bulk collection actions
+Acceptance: at most 20 explicit IDs, sequential manual collection, per-Listing outcomes, cancellation and failure isolation; no retries.
 
-### Task 39: Backup and restore verification
+### Task 42: Recent price changes
+Acceptance: bounded comparisons of consecutive valid same-Listing/currency price points, exact percentages, and no derived-price persistence.
 
-Covered by Task 24: verify durable application and Goose state using disposable backup/restore. Process-local collection diagnostics intentionally reset on restart.
+### Task 43: Home overview
+Acceptance: global counts and five-item sections reuse price-change/alert semantics, support partial failure, and preserve Products at `/products`.
 
-### Task 40: Query and retention review
+### Task 44: Frontend UX/accessibility hardening
+Acceptance: keyboard navigation/scroll regions, announcements, defensive price display, and responsive utilities without semantic changes.
 
-Task 24 reviews representative query/index shapes; larger-data measurement remains deferred until a demonstrated need. Do not delete historical data or add new infrastructure without an explicit reviewed decision.
+### Task 45: MVP readiness and smoke test
+Acceptance: accurate setup path, explicit DB configuration, opt-in unique manual-data smoke flow, and repository hygiene checks. Live verification requires PostgreSQL.
 
-## Later product matching
+### Task 46: Final QA and portfolio polish
+Acceptance: correct factual documentation drift, summarize implemented capabilities and limitations, fix clear navigation/wording issues, and report actual verification results. No new product scope.
 
-### Task 41: Matching requirements and evidence
+## Deferred, not implemented
 
-Acceptance: document supported identity/variant criteria and representative positive/negative examples for cross-retailer matching. Define review and correction needs before implementing automatic associations.
+- First real provider, then additional providers: require explicit access, retention,
+  and domain-fit approval; Price API remains NEEDS CLARIFICATION.
+- Provider-specific rate limits/backoff and retry workers: no current automatic retry system.
+- Automatic Product matching, discovery, currency conversion, large-data scaling,
+  and deployment/access-control work require separately approved tasks.
+- External email/SMS/push/webhook notification delivery remains outside project scope.
 
-### Task 42: Match suggestions
-
-Acceptance: propose candidate matches with explainable evidence against a small labeled sample; leave Product/Listing associations unchanged until reviewed.
-
-### Task 43: Reviewed match application
-
-Acceptance: apply approved associations with an audit trail and a correction path; preserve listing identities and immutable observation history. Verify materially different variants are not silently merged.
-
-## Deferred expansion
-
-Add further provider, deployment, access-control, matching, or scale tasks only when concrete requirements exist. Repeat small provider tasks individually rather than combining many integrations into one commit. Public deployment requires its own reviewed access and operational readiness work; this roadmap does not imply the MVP is ready for unrestricted exposure.
+These replace the obsolete future task-number assignments for second providers,
+retry hardening and matching. No deferred item authorizes implementation.

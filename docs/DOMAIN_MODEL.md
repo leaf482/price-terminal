@@ -23,7 +23,7 @@ This document defines concepts and invariants, not a final database schema or ex
 - **Membership conditions:** eligibility constraints that may apply to a price or promotion. They are not monetary savings by themselves.
 - **Effective price:** a derived amount for a named scenario, using explicit inputs, eligibility, and calculation rules. It is not an observed retailer price.
 
-If a source only provides a current offer amount without identifying list or sale meaning, preserve it as an observed offer price with that meaning rather than inventing either classification. Field names and storage details are deferred; distinct meanings must survive ingestion, storage, APIs, and display.
+If a source only provides a current offer amount without identifying list or sale meaning, preserve it as an observed offer price with that meaning rather than inventing either classification. The implemented fields preserve MSRP, retailer list, sale, and offer prices separately through ingestion, storage, APIs, and display. USD and JPY are supported; stock-only observations have no currency.
 
 ## Relationships
 
@@ -72,13 +72,13 @@ Metadata edits do not change observations, collection state, promotions or alert
 
 **Responsibility:** represent a retailer-specific product page for a defined item/variant and collection context.
 
-A Listing links Product and Retailer and carries a canonical source URL and, where available, a retailer identifier. Avoid duplicate tracking of the same source/context. URL alone may not distinguish selected variants, so retain the source references needed to collect the intended item.
+A Listing links Product and Retailer and carries an exact source URL (without aggressive normalization) and, where available, a retailer identifier. Avoid duplicate tracking of the same source/context. URL alone may not distinguish selected variants, so retain the source references needed to collect the intended item.
 
 A Listing is the initial unit of collection, price history, and alerting. A displayed current price is selected from its observations; updating listing metadata must not rewrite historical observations. If a page changes to a different item, do not silently blend the two histories.
 
 ## PriceObservation
 
-**Responsibility:** capture immutable historical facts accepted from a collection attempt for a Listing.
+**Responsibility:** capture immutable historical facts accepted from manual entry, CSV import, or provider collection for a Listing.
 
 Preserve listing identity, source/provenance, observation time, ingestion time where needed, currency, observed price meanings, stock state, and relevant conditions/evidence. Represent timestamps as unambiguous instants, with UTC for storage/exchange. Distinguish when data was observed from when it was persisted; retries must not refresh the original observation time.
 
@@ -90,9 +90,9 @@ Required stock states are:
 
 A source can validly expose stock without a price or a price without known stock. A failed collection is separate operational data, not an observation that prices disappeared. Reject malformed results rather than silently converting parsing failures into absent fields.
 
-Observations are append-only: no in-place correction of their historical facts. If an accepted observation is later found invalid, preserve it and record an explicit quality/invalidation annotation or superseding evidence; define whether queries exclude it. Normal application code must not erase history to fix a parser bug.
+Observations are append-only: no in-place correction of their historical facts. If an accepted observation is later found invalid, preserve it and record an explicit quality/invalidation annotation. Current-price/history queries and alert evaluation exclude invalidated observations; audit reads and CSV export include them. Normal application code must not erase history to fix a parser bug.
 
-Retrying persistence of the same collection result must not append duplicates. A later, independent observation of an unchanged price remains a valid new observation because its time and freshness differ.
+Retrying persistence of the same collection result must not append duplicates; a reused observation ID returns a uniqueness conflict. A later, independent observation of an unchanged price remains a valid new observation because its time and freshness differ.
 
 ## Promotion
 

@@ -1,10 +1,167 @@
 # Product Price Tracker
 
-A general-purpose tracker for retailer listing prices, price history, promotions,
-and alerts. This repository contains a Go backend with liveness and
-database readiness checks, local PostgreSQL, and a Next.js catalog/detail UI.
-Catalog APIs, immutable observation persistence, an opt-in Fake collection runtime,
-and current-price APIs are available. No real retailer is collected yet.
+A local-first Product Price Tracker built with **Next.js/TypeScript, Go, and
+PostgreSQL**. It makes recorded prices, their history, and the evidence behind
+conditional savings inspectable. It is a portfolio MVP, not a live retailer feed.
+
+### What is implemented
+
+- Catalog creation/editing, Product archiving, Listing tracking controls, global
+  search, and dedicated Product/Retailer/Listing views.
+- Manual price entry and bounded transactional CSV import; current prices,
+  history charts, cross-Listing comparison, and recent observed-price changes.
+- Promotion evidence and explicitly derived EffectivePrice scenarios; target,
+  percentage-drop, and historical-low alerts with durable in-app events.
+- Observation audit/invalidation and CSV export; collection attempt history,
+  health overview, manual/bulk controls, and a deterministic Fake provider runtime.
+- Goose migrations, PostgreSQL backup/restore instructions and integration tests,
+  plus an opt-in local smoke script. See the quick start for verification commands.
+
+### Architecture and data integrity
+
+```text
+Browser -> Next.js UI / same-origin API proxy -> Go API -> PostgreSQL
+Catalog -> Manual entry / CSV import / configured Fake collection
+        -> Immutable PriceObservations -> Current prices + History
+                                     -> Promotion scenarios -> Derived EffectivePrice
+                                     -> Observed-price alerts + Audit
+```
+
+Observed prices are evidence; EffectivePrice is a calculation with eligibility,
+stacking, and cashback assumptions. Keeping them separate prevents conditional
+savings from looking like guaranteed prices. Ordinary alerts use observed prices,
+not EffectivePrice; CSV imports do not generate retroactive alert events.
+
+Money uses integer minor units (USD/JPY), missing values remain distinct from zero,
+and currencies are never converted or silently compared. Invalidation annotates
+immutable facts; observation freshness is separate from collection attempt time.
+Read endpoints are bounded, but no large-scale performance claim is made.
+
+**Current limitation:** no real provider adapter is implemented. Price API remains
+**NEEDS CLARIFICATION**, especially for normalized historical retention and public
+use; see [provider research](docs/PROVIDER_RESEARCH.md). Manual/CSV observations are
+the usable data path. Fake collection is opt-in development infrastructure only.
+There is no auth, external alert delivery, automatic product matching, or public
+production deployment configuration.
+
+## Quick start: one local setup path (PowerShell 7)
+
+Run commands from the repository root unless a step changes directory. This path
+uses manual observations: **no real external provider is implemented or approved**.
+Leave `COLLECTOR_CONFIG` empty; automatic external price collection does not work.
+
+1. **Prerequisites:** Git, Go 1.25+, Node.js **24** (includes the TypeScript-stripping
+   support used by tests), npm, PowerShell 7+, Docker with Compose v2/Linux containers.
+   Start Docker Desktop. Goose installation may download Go 1.26 automatically.
+2. **Environment:** copy once, then load in each backend/frontend terminal:
+
+   ```powershell
+   if (-not (Test-Path .env)) { Copy-Item .env.example .env }
+   Get-Content .env | ForEach-Object {
+     if ($_ -match '^([A-Z][A-Z0-9_]*)=(.*)$') {
+       [Environment]::SetEnvironmentVariable($Matches[1], $Matches[2], 'Process')
+     }
+   }
+   ```
+
+   Required explicit backend target: `PGHOST`, `PGDATABASE`, `PGUSER`; missing
+   values fail startup with the variable name (never its value). For this local
+   password-authenticated database also use `PGPASSWORD` from the example.
+   `PGPORT=5432` and `PGSSLMODE=disable` are explicit local settings. The public
+   development password is not a production secret. `.env` is ignored; neither
+   backend nor Next.js automatically loads the root file. Compose does.
+
+   Optional: `LISTEN_ADDR` defaults to `127.0.0.1:8080`; `BACKEND_URL` defaults to
+   `http://127.0.0.1:8080`. Fake-only collection settings and `PRICE_MAX_AGE` are
+   optional and documented in `.env.example`. Do not put DB credentials in browser
+   configuration. This MVP has no auth; keep it on a trusted/local network.
+3. **Start PostgreSQL:**
+
+   ```powershell
+   docker compose up -d --wait postgres
+   ```
+
+   Data stays in the named volume. Existing-volume credentials do not change when
+   `.env` changes. If 5432 is occupied, change `PGPORT` before starting.
+4. **Install pinned Goose and migrate:**
+
+   ```powershell
+   go install -tags='no_clickhouse,no_libsql,no_mssql,no_mysql,no_sqlite3,no_vertica,no_ydb' github.com/pressly/goose/v3/cmd/goose@v3.28.0
+   $goBin = go env GOBIN
+   if (-not $goBin) { $goBin = Join-Path (go env GOPATH) 'bin' }
+   $env:Path = "$goBin;$env:Path"
+   goose -env .env -dir backend/migrations -timeout 30s postgres "application_name=price_terminal_migrations connect_timeout=5" up
+   goose -env .env -dir backend/migrations -timeout 30s postgres "application_name=price_terminal_migrations connect_timeout=5" version
+   ```
+
+   Expected latest version: **9**. Repeating `up` is safe. No migrations run at
+   backend startup. See Database migrations below for status/rollback commands.
+5. **Start backend** in the terminal with environment loaded:
+
+   ```powershell
+   Set-Location backend
+   go run .
+   ```
+
+6. **Start frontend** in a separate terminal, loading step 2 from the repo root first:
+
+   ```powershell
+   Set-Location frontend
+   npm ci
+   npm run dev
+   ```
+
+   Production-mode verification instead: `npm run build` then `npm start`.
+   Supply the same `BACKEND_URL` for build and start; rebuild after changing it.
+7. **Verify health/readiness** from another terminal:
+
+   ```powershell
+   curl.exe --fail-with-body http://127.0.0.1:8080/healthz
+   curl.exe --fail-with-body http://127.0.0.1:8080/readyz
+   ```
+
+   Expect `ok` and `ready`. An unreachable DB returns readiness 503 while liveness
+   stays 200. Adjust URLs if changing `LISTEN_ADDR`.
+8. **Create sample catalog:** open `http://localhost:3000/catalog`; create a Product,
+   Retailer, and Listing referencing both. Use an explicit demo name and an
+   `https://example.com/` source URL. Nothing is automatically seeded.
+9. **Record a manual price:** open that Listing, choose Record price, enter source
+   evidence, an RFC3339 time, in-stock, USD, and offer price `19.99`. Repeat at a
+   later time with `17.99` for a two-point history. Blank prices remain missing;
+   `0` is explicit zero. No real provider is needed.
+10. **View:** Home `/`, Product dashboard `/products`, and Listing detail
+    `/listings/{id}` show current data. Select ALL history to see both points.
+    Optional promotions and observed-price alerts can be created on Listing detail.
+
+### Opt-in smoke test
+
+With the migrated backend running, run from the repo root:
+
+```powershell
+pwsh -NoProfile -File scripts/smoke.ps1
+# Optional alternative local backend origin:
+# pwsh -NoProfile -File scripts/smoke.ps1 -BaseUrl http://127.0.0.1:8081
+```
+
+The script checks health/readiness, creates unique `smoke-<GUID>` Product/Retailer/
+Listing IDs, records one manual USD observation, then asserts current-price and
+history data. It fails on unexpected status/data and does not retry writes.
+**Smoke records remain**, including after partial failure; the printed prefix
+identifies them. No existing records are updated and no delete API is added.
+This verifies the backend flow; open its printed Listing URL to check the UI.
+For a no-network script regression check, run
+`pwsh -NoProfile -File scripts/smoke.test.ps1` (mock responses, not live verification).
+
+Stop servers with Ctrl+C. `docker compose down` keeps the database volume; do not
+add `--volumes` unless deliberately deleting local data.
+
+### Routine verification
+
+From `backend/`: `go test -count=1 ./...` and `go vet ./...`.
+From `frontend/`: `npm test`, `npm run lint`, `npm run build`.
+With PostgreSQL running, Goose on PATH, and environment loaded, run from `backend/`:
+`go test -tags=integration -count=1 ./...`. Tests create/drop their own disposable
+DBs and do not delete the regular development database.
 
 ## Manual observations and deployment configuration (Task 26)
 
@@ -241,7 +398,7 @@ See [the project plan](docs/PROJECT_PLAN.md) and [task roadmap](docs/TASKS.md).
 ## Prerequisites
 
 - Go 1.25 or newer.
-- Node.js 20.9 or newer and npm. Node.js 24 is used for local verification.
+- Node.js 24 and npm for the documented run/test workflow.
 - Docker with Compose v2 or newer (Docker Desktop with Linux containers on Windows).
 
 The frontend runs independently. PostgreSQL is required for backend readiness,
@@ -439,7 +596,7 @@ goose -env .env -dir backend/migrations -timeout 30s postgres "dbname=price_term
 Only the target database name is overridden; host, port, user, password, and TLS
 still come from the existing configuration. Repeat the same disposable-target
 command with `up`, `down`, then `up` to check no-op, rollback, and reapply.
-Use these read-only checks to inspect metadata and confirm eight application tables:
+Use these read-only checks to inspect metadata and confirm nine application tables (plus Goose metadata):
 
 ```sh
 docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d price_terminal_migration_check -c "TABLE public.goose_db_version;"'
@@ -757,10 +914,9 @@ price, comparison, and history APIs remain unchanged.
 
 ### Catalog and history
 
-The catalog at `/` displays up to 20 products by ID and their current comparable
+The Product dashboard at `/products` displays up to 20 products by ID and their current comparable
 prices. Product detail pages show Listings, source links, stock, freshness, and
-selectable history. Existing catalog APIs supply the data; no create/edit UI is
-included. Keep the Go backend running with migrations applied.
+selectable history. Existing catalog APIs supply the data; catalog create/edit UI is available at `/catalog`. Keep the Go backend running with migrations applied.
 
 Set `BACKEND_URL` in the frontend process environment to override
 `http://127.0.0.1:8080` (no trailing slash). Restart/rebuild Next.js after changing

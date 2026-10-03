@@ -6,7 +6,7 @@ Build a general-purpose Product Price Tracker that records retailer listing pric
 
 A Product describes a retailer-independent item. A Listing describes a specific retailer product page. Early phases track explicitly selected listings; automatic cross-retailer product matching comes later. A Provider is an integration that collects data from a retailer or other permitted source.
 
-These documents describe intended behavior, not existing functionality. Task 0 adds documentation only. The repository initially contains a single heading in `README.md` and no application infrastructure.
+The MVP now implements catalog management, manual/CSV observations, current/history views, promotions/EffectivePrice, in-app alerts, audit/export, and collection diagnostics. No real provider adapter is implemented; Price API remains NEEDS CLARIFICATION. The usable data path is manual entry/CSV import, with opt-in Fake collection for development. The roadmap below retains future goals and is not a claim that external collection is available.
 
 ## Core goals
 
@@ -59,7 +59,7 @@ Users configure, enable/disable, and view alerts and triggered events in the fro
 - **Database:** PostgreSQL for persisted domain data, observations, and initial operational state.
 - **Repository:** One repository and one Go codebase; the API and collector may have separate entry points/binaries.
 
-Exact versions, routing libraries, database drivers, migration tooling, chart libraries, and deployment choices are deferred to the tasks that require them. A local PostgreSQL environment is planned after repository bootstrap; Task 0 creates no setup files, dependencies, or Docker files.
+Implemented: Go standard-library HTTP with database/sql + pgx, Goose SQL migrations, Docker Compose PostgreSQL, and Next.js/React/TypeScript with an SVG history chart. The API and single-instance collector currently run in one process. Exact versions and local commands are in README; cloud deployment remains out of scope.
 
 ## Explicit early non-goals
 
@@ -77,12 +77,12 @@ Exact versions, routing libraries, database drivers, migration tooling, chart li
 
 1. **Documentation and repository bootstrap:** establish the planning baseline, minimal Go/Next.js structure, local PostgreSQL access, and repeatable migrations.
 2. **Domain and persistence:** define core semantics, persist products/listings and immutable observations, and expose narrow catalog APIs.
-3. **Providers and ingestion:** introduce a provider contract, deterministic fake provider, validated ingestion, failure isolation, and a first real provider.
+3. **Providers and ingestion:** introduce a provider contract, deterministic fake provider, validated ingestion, failure isolation, and a first real provider only after access/retention approval (still blocked).
 4. **Collection and current-price MVP:** schedule bounded collection, query current known prices, and display listings, freshness, and stock in a minimal frontend.
 5. **History:** expose bounded price history and a labeled chart without hiding missing data.
 6. **Promotions and price meaning:** preserve promotion facts, calculate limited scenario-based effective prices, and validate MSRP-specific display and comparisons. MSRP semantics apply from the first domain implementation.
 7. **Alerts:** add alert configuration, evaluation, durable triggered events, and frontend controls. No external notification delivery.
-8. **Additional providers and reliability:** prove extensibility, strengthen retry behavior, visibility, backup/recovery, and operational checks. Basic isolation and correctness are required earlier, not postponed to this phase.
+8. **Additional providers and reliability:** prove extensibility, strengthen visibility, backup/recovery, and operational checks. Automatic retries and further providers remain deferred. Basic isolation and correctness are required earlier, not postponed to this phase.
 9. **Later product matching:** propose cross-retailer matches with variant evidence and review before expanding automation.
 
 See [TASKS.md](TASKS.md) for the ordered, commit-sized work queue. See [DOMAIN_MODEL.md](DOMAIN_MODEL.md) for terminology, [ARCHITECTURE.md](ARCHITECTURE.md) for boundaries, and [DEVELOPMENT_WORKFLOW.md](DEVELOPMENT_WORKFLOW.md) for the mandatory review process. Update the relevant documents when reviewed decisions change these plans.

@@ -3,12 +3,21 @@ package main
 import (
 	"database/sql"
 	"errors"
+	"fmt"
+	"os"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/stdlib"
 )
 
 func openDatabase() (*sql.DB, error) {
+	// Require an explicit database target instead of silently using OS-user defaults.
+	for _, key := range []string{"PGHOST", "PGDATABASE", "PGUSER"} {
+		if strings.TrimSpace(os.Getenv(key)) == "" {
+			return nil, fmt.Errorf("missing required PostgreSQL configuration: %s", key)
+		}
+	}
 	// An empty connection string uses the standard PG* environment variables.
 	config, err := pgx.ParseConfig("")
 	if err != nil {
