@@ -88,13 +88,7 @@ func scanCurrent(row interface{ Scan(...any) error }) (CurrentListing, error) {
 		return result, nil
 	}
 	input := domain.PriceObservationInput{ListingID: l.ID, ObservedAt: observed.Time.Add(time.Duration(remainder.Int64)), Source: source.String, Stock: domain.StockState(stock.String), MSRPSource: msrpSource.String}
-	fields := []**domain.Money{&input.MSRP, &input.RetailerListPrice, &input.SalePrice, &input.OfferPrice}
-	for i, amount := range amounts {
-		if amount.Valid {
-			*fields[i] = &domain.Money{MinorUnits: amount.Int64, Currency: domain.Currency(currency.String)}
-		}
-	}
-	observation, err := domain.NewPriceObservation(input)
+	observation, err := observationFromAmounts(input, currency, amounts)
 	if err != nil {
 		return result, err
 	}

@@ -100,13 +100,7 @@ func (s *Store) ListPriceObservations(ctx context.Context, listingID string) ([]
 			return nil, fmt.Errorf("list observations: %w", err)
 		}
 		input.ObservedAt = input.ObservedAt.Add(time.Duration(remainder))
-		prices := []**domain.Money{&input.MSRP, &input.RetailerListPrice, &input.SalePrice, &input.OfferPrice}
-		for i, amount := range amounts {
-			if amount.Valid {
-				*prices[i] = &domain.Money{MinorUnits: amount.Int64, Currency: domain.Currency(currency.String)}
-			}
-		}
-		observation, err := domain.NewPriceObservation(input)
+		observation, err := observationFromAmounts(input, currency, amounts)
 		if err != nil {
 			return nil, fmt.Errorf("list observations: %w", err)
 		}

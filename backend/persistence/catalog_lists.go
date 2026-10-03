@@ -22,11 +22,8 @@ func (s *Store) ListRetailers(ctx context.Context, limit int) ([]domain.Retailer
 	defer rows.Close()
 	retailers := make([]domain.Retailer, 0)
 	for rows.Next() {
-		var retailer domain.Retailer
-		if err := rows.Scan(&retailer.ID, &retailer.Name); err != nil {
-			return nil, fmt.Errorf("list retailers: %w", err)
-		}
-		if err := retailer.Validate(); err != nil {
+		retailer, err := scanRetailer(rows)
+		if err != nil {
 			return nil, fmt.Errorf("list retailers: %w", err)
 		}
 		retailers = append(retailers, retailer)
@@ -54,11 +51,8 @@ func (s *Store) ListListingsByProduct(ctx context.Context, productID string, lim
 	defer rows.Close()
 	listings := make([]domain.Listing, 0)
 	for rows.Next() {
-		var listing domain.Listing
-		if err := rows.Scan(&listing.ID, &listing.ProductID, &listing.RetailerID, &listing.URL, &listing.RetailerProductID, &listing.TrackingDisabled); err != nil {
-			return nil, fmt.Errorf("list listings: %w", err)
-		}
-		if err := listing.Validate(); err != nil {
+		listing, err := scanListing(rows)
+		if err != nil {
 			return nil, fmt.Errorf("list listings: %w", err)
 		}
 		listings = append(listings, listing)

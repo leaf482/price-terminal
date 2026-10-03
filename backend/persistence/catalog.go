@@ -29,13 +29,8 @@ func (s *Store) InsertProduct(ctx context.Context, product domain.Product) error
 }
 
 func (s *Store) GetProduct(ctx context.Context, id string) (domain.Product, error) {
-	var product domain.Product
-	err := s.db.QueryRowContext(ctx, `SELECT id, name, brand, model, archived FROM products WHERE id = $1`, id).
-		Scan(&product.ID, &product.Name, &product.Brand, &product.Model, &product.Archived)
+	product, err := scanProduct(s.db.QueryRowContext(ctx, `SELECT id, name, brand, model, archived FROM products WHERE id = $1`, id))
 	if err != nil {
-		return domain.Product{}, fmt.Errorf("get product: %w", err)
-	}
-	if err := product.Validate(); err != nil {
 		return domain.Product{}, fmt.Errorf("get product: %w", err)
 	}
 	return product, nil
@@ -59,11 +54,8 @@ func (s *Store) listProducts(ctx context.Context, limit int, includeArchived boo
 	defer rows.Close()
 	products := make([]domain.Product, 0)
 	for rows.Next() {
-		var p domain.Product
-		if err := rows.Scan(&p.ID, &p.Name, &p.Brand, &p.Model, &p.Archived); err != nil {
-			return nil, fmt.Errorf("list products: %w", err)
-		}
-		if err := p.Validate(); err != nil {
+		p, err := scanProduct(rows)
+		if err != nil {
 			return nil, fmt.Errorf("list products: %w", err)
 		}
 		products = append(products, p)
@@ -86,13 +78,8 @@ func (s *Store) InsertRetailer(ctx context.Context, retailer domain.Retailer) er
 }
 
 func (s *Store) GetRetailer(ctx context.Context, id string) (domain.Retailer, error) {
-	var retailer domain.Retailer
-	err := s.db.QueryRowContext(ctx, `SELECT id, name FROM retailers WHERE id = $1`, id).
-		Scan(&retailer.ID, &retailer.Name)
+	retailer, err := scanRetailer(s.db.QueryRowContext(ctx, `SELECT id, name FROM retailers WHERE id = $1`, id))
 	if err != nil {
-		return domain.Retailer{}, fmt.Errorf("get retailer: %w", err)
-	}
-	if err := retailer.Validate(); err != nil {
 		return domain.Retailer{}, fmt.Errorf("get retailer: %w", err)
 	}
 	return retailer, nil
@@ -114,13 +101,8 @@ func (s *Store) InsertListing(ctx context.Context, listing domain.Listing) error
 }
 
 func (s *Store) GetListing(ctx context.Context, id string) (domain.Listing, error) {
-	var listing domain.Listing
-	err := s.db.QueryRowContext(ctx, `SELECT id, product_id, retailer_id, url, retailer_product_id, NOT tracking_enabled FROM listings WHERE id = $1`, id).
-		Scan(&listing.ID, &listing.ProductID, &listing.RetailerID, &listing.URL, &listing.RetailerProductID, &listing.TrackingDisabled)
+	listing, err := scanListing(s.db.QueryRowContext(ctx, `SELECT id, product_id, retailer_id, url, retailer_product_id, NOT tracking_enabled FROM listings WHERE id = $1`, id))
 	if err != nil {
-		return domain.Listing{}, fmt.Errorf("get listing: %w", err)
-	}
-	if err := listing.Validate(); err != nil {
 		return domain.Listing{}, fmt.Errorf("get listing: %w", err)
 	}
 	return listing, nil
