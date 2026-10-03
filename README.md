@@ -820,7 +820,10 @@ Open **Manage catalog** (`/catalog`) to create Products, Retailers, and linked
 Listings using the existing catalog APIs. Product/Retailer suggestions and browse
 lists are bounded to 100 records; exact IDs can also be entered. Listings are
 browsed by Product and retain their exact URL and optional retailer product ID.
-There are no edit/delete operations.
+Product name, brand, and model can be edited from Product detail; Retailer name
+can be edited from `/catalog`. Listing source identity (ProductID, RetailerID,
+URL, and retailer product ID) remains immutable; changing it requires creating a
+new Listing. Deletion is not supported.
 
 Product detail separates source observation time from process-local collection
 attempt/success times. **Refresh price** sends `POST /listings/{id}/collect`,
@@ -916,7 +919,9 @@ price, comparison, and history APIs remain unchanged.
 
 The Product dashboard at `/products` displays up to 20 products by ID and their current comparable
 prices. Product detail pages show Listings, source links, stock, freshness, and
-selectable history. Existing catalog APIs supply the data; catalog create/edit UI is available at `/catalog`. Keep the Go backend running with migrations applied.
+selectable history. Existing catalog APIs supply the data. Catalog creation and
+Retailer name editing are available at `/catalog`; Product name, brand, and model
+editing is available from Product detail. Keep the Go backend running with migrations applied.
 
 Set `BACKEND_URL` in the frontend process environment to override
 `http://127.0.0.1:8080` (no trailing slash). Restart/rebuild Next.js after changing
