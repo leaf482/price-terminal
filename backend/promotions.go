@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/leaf482/price-terminal/backend/application"
 	"github.com/leaf482/price-terminal/backend/domain"
 	"github.com/leaf482/price-terminal/backend/persistence"
 	"net/http"
@@ -159,32 +160,27 @@ func (a promotionAPI) effective(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	id := r.PathValue("id")
 	now := a.now().UTC()
-	current, err := a.store.CurrentListing(ctx, id)
+	view, err := application.ReadEffectivePrice(ctx, a.store, id, ids, scenario, now)
 	if err != nil {
-		catalogReadError(w, err, "listing")
+		switch {
+		case errors.Is(err, application.ErrCurrentListing):
+			catalogReadError(w, err, "listing")
+		case errors.Is(err, application.ErrSelectedPromotion):
+			catalogReadError(w, err, "promotion")
+		default:
+			productError(w, 500, "internal_error", "unable to calculate effective price")
+		}
 		return
 	}
-	selected := make([]domain.Promotion, 0, len(ids))
-	evidence := make([]promotionJSON, 0, len(ids))
-	for _, pid := range ids {
-		p, err := a.store.GetPromotion(ctx, id, pid)
-		if err != nil {
-			catalogReadError(w, err, "promotion")
-			return
-		}
-		selected = append(selected, p)
+	evidence := make([]promotionJSON, 0, len(view.Promotions))
+	for _, p := range view.Promotions {
 		evidence = append(evidence, promotionResponse(p))
 	}
-	result := domain.EffectivePrice{Status: "unavailable", Reason: "missing_observation"}
 	var observation *observationJSON
-	if current.Observation != nil {
-		observation = observationResponse(*current.Observation)
-		result, err = domain.CalculateEffectivePrice(*current.Observation, selected, scenario, now)
-		if err != nil {
-			productError(w, 500, "internal_error", "unable to calculate effective price")
-			return
-		}
+	if view.Observation != nil {
+		observation = observationResponse(*view.Observation)
 	}
+	result := view.Price
 	writeJSON(w, 200, map[string]any{"data": map[string]any{
 		"listing_id": id, "status": result.Status, "reason": result.Reason, "rule": "selected-promotions-v1", "calculated_at": now, "observation": observation, "price_basis": result.Basis, "scenario": scenario, "promotions": evidence,
 		"base": promotionMoneyJSON(result.Base), "immediate_discount": promotionMoneyJSON(result.ImmediateDiscount), "immediate_payable": promotionMoneyJSON(result.Payable), "potential_cashback": promotionMoneyJSON(result.Cashback), "potential_net": promotionMoneyJSON(result.Net),
