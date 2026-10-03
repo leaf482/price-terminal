@@ -52,3 +52,14 @@ test('Listing composition preserves navigation, price/stock states and existing 
  assert.match(renderToStaticMarkup(load('../app/listings/[id]/error.tsx')({reset(){}})),/role="alert"/);
  assert.match(renderToStaticMarkup(load('../app/listings/[id]/not-found.tsx')()),/Listing not found/);
 });
+
+// Exercise the separate identity and observed-fact presentations through their
+// page contract; no implementation-specific component exports are needed.
+test('Listing presentation retains all price roles, evidence and identity fallbacks',async()=>{
+ const observation={...current.observation,msrp:1500,msrp_source:'Manufacturer evidence',retailer_list_price:1200,sale_price:1000,offer_price:0};
+ const page=load('../app/listings/[id]/page.tsx',{current:{...current,observation},product:null,retailer:null});
+ const html=renderToStaticMarkup(await page({params:Promise.resolve({id:'constructor'})}));
+ for(const text of ['Observed current price','USD 0.00','MSRP: USD 15.00','Manufacturer evidence','Retailer list: USD 12.00','Sale price: USD 10.00','Tracking: disabled','Freshness: stale',observation.observed_at,'Source identity is read-only'])assert.ok(html.includes(text),text);
+ assert.equal((html.match(/role="alert"/g)||[]).length,2);
+ assert.match(html,/href="https:\/\/example.com\/item" target="_blank" rel="noreferrer"/);
+});
