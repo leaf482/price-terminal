@@ -55,3 +55,137 @@ th { background: #eee; }
   .panel { padding: .75rem; }
   .controls { gap: .75rem; }
 }
+
+/* Shared visual rhythm; all state labels and full data remain visible. */
+body { background: #f5f7fa; color: #202b3c; }
+main { margin-block: 2.5rem 5rem; }
+h1 { margin-block: 1rem 1.5rem; letter-spacing: -.025em; }
+h2 { font-size: 1.5rem; margin-block: 2rem 1rem; }
+h3 { font-size: 1.15rem; }
+p { margin-block: .75rem; }
+section + section { margin-top: 2rem; }
+.panel { border-color: #d6dee8; padding: 1.25rem; }
+.panel > :first-child { margin-top: 0; }
+.panel > :last-child { margin-bottom: 0; }
+.panel + .panel { margin-top: 1rem; }
+.grid { align-items: start; }
+.grid > .panel { margin-top: 0; }
+.primary-nav { max-width: 75rem; margin-inline: auto; gap: .25rem .5rem; }
+.primary-nav a { padding: .5rem .75rem; font-weight: 600; text-decoration: none; border-radius: .4rem; }
+.primary-nav a:hover { background: #e6edf8; text-decoration: underline; }
+.catalog-search { max-width: 72rem; margin: 0 auto; border-radius: 8px; }
+.catalog-search form { display: flex; flex-wrap: wrap; gap: .75rem; align-items: end; }
+.catalog-search label { flex: 1 1 18rem; margin: 0; }
+.catalog-search input { display: block; width: 100%; }
+.catalog-search > p { margin-bottom: 0; font-size: .85rem; color: #526078; }
+label { font-weight: 600; vertical-align: top; }
+label input, label select { font-weight: normal; }
+input, select, textarea { max-width: 100%; border: 1px solid #8593a8; border-radius: 5px; background: white; color: #202b3c; padding: .55rem .65rem; min-height: 2.75rem; }
+input[type=checkbox], input[type=radio] { min-height: auto; accent-color: #1d4ed8; }
+form p:has(> label) { margin-block: .6rem; }
+form label:has(> br) { width: 100%; }
+form label > br + input { width: 100%; }
+button { padding: .5rem .9rem; border-color: #8593a8; font-weight: 600; }
+button:hover:not(:disabled) { background: #eef3fc; border-color: #1d4ed8; }
+form button:not([type=button]) { background: #1d4ed8; border-color: #1d4ed8; color: white; }
+form button:not([type=button]):hover:not(:disabled) { background: #173ea8; }
+.controls { background: #eef2f7; padding: 1rem; border-radius: 8px; gap: 1rem; align-items: end; }
+.muted { color: #526078; }
+.price { color: #142c51; font-variant-numeric: tabular-nums; line-height: 1.3; }
+.derived-price { background: #f7f3fc; border-left: 4px solid #7952a3; }
+.status-label { display: inline-block; border: 1px solid #b8c4d3; border-radius: 5px; padding: .1rem .45rem; background: #eef2f7; font-size: .875rem; font-weight: 600; }
+.status-label[data-state=enabled], .status-label[data-state=success], .status-label[data-state=valid] { background: #eaf5ef; border-color: #93b7a3; color: #24553c; }
+.status-label[data-state=invalidated], .status-label[data-state=provider_error], .status-label[data-state=persistence_error] { background: #fff0ef; border-color: #ce9d98; color: #852d27; }
+[role=alert] { background: #fff0ef; color: #852d27; border-color: #b83d32; padding: .75rem 1rem; border-radius: 4px; }
+p[role=status] { background: #eef2f7; padding: .75rem 1rem; border-radius: 4px; }
+.table-scroll { border: 1px solid #d6dee8; border-radius: 8px; background: white; }
+table { font-size: .9rem; line-height: 1.5; }
+caption { text-align: left; padding: 1rem; color: #526078; }
+th { background: #eaf0f7; font-size: .8rem; }
+th, td { padding: .85rem; border-color: #dce3ed; min-width: 7rem; overflow-wrap: anywhere; }
+td { font-variant-numeric: tabular-nums; }
+tbody tr:nth-child(even) { background: #f8fafc; }
+tbody tr:hover { background: #f0f5fc; }
+.numeric { text-align: right; white-space: nowrap; }
+.timestamp { min-width: 13rem; white-space: nowrap; }
+.table-scroll td:has(details) { min-width: 20rem; }
+main > nav a + a { margin-left: .75rem; }
+details { margin-block: .75rem; }
+summary { cursor: pointer; padding-block: .5rem; font-weight: 600; }
+dt { font-size: .85rem; font-weight: 600; color: #526078; }
+dd { margin: .2rem 0 1rem; }
+main > section > article + article { border-top: 1px solid #d6dee8; padding-top: 1rem; margin-top: 1rem; }
+@media (max-width: 76rem) { .catalog-search { margin-inline: 1.5rem; } }
+@media (max-width: 40rem) {
+ .catalog-search { margin-inline: .75rem; }
+ .primary-nav { gap: .15rem; }
+ .primary-nav a { padding: .5rem; }
+ h1 { font-size: 2rem; }
+ label > select { display: block; }
+ .controls > label, form > label { width: 100%; margin-right: 0; }
+ .controls input:not([type=checkbox]), form > label > input:not([type=checkbox]) { width: 100%; }
+ th, td { padding: .65rem; }
+}
+
+/* Price-first browsing: quiet surfaces, strong values, secondary operations. */
+body { background: #fff; color: #243044; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; }
+main { max-width: 72rem; margin-block: 3.5rem 6rem; }
+h1 { font-size: clamp(2rem, 4vw, 2.75rem); font-weight: 750; letter-spacing: -.035em; }
+h2 { font-size: 1.4rem; margin-top: 2.75rem; letter-spacing: -.02em; }
+h3, h4 { letter-spacing: -.015em; }
+a { text-decoration-thickness: 1px; }
+.primary-nav { align-items: center; padding-block: 1rem; }
+.primary-nav a { color: #354155; }
+.nav-secondary { display: flex; flex-wrap: wrap; gap: .25rem; margin-left: auto; font-size: .875rem; }
+.nav-secondary a { color: #637087; font-weight: 500; }
+.catalog-search { background: #f6f8fa; border: 0; padding: .9rem 1.25rem; }
+.catalog-search form { align-items: center; }
+.catalog-search label { display: flex; align-items: center; gap: 1rem; font-size: .875rem; }
+.catalog-search input { flex: 1; min-width: 0; background: white; }
+.catalog-search > p { font-size: .75rem; }
+.panel { border: 0; border-radius: 16px; background: #f7f9fb; padding: 1.5rem; }
+.grid { gap: 1.5rem; }
+.price { font-size: 2rem; letter-spacing: -.04em; font-weight: 750; color: #182334; }
+.price-hero { margin-block: 2rem; }
+.price-hero .price { font-size: clamp(2.6rem, 7vw, 4rem); margin-block: .35rem .75rem; }
+.price-hero h2 { font-size: 1rem; color: #637087; font-weight: 500; margin-top: 0; }
+.eyebrow { color: #637087; letter-spacing: .04em; }
+.listing-identity h1 { font-size: 1.5rem; }
+.listing-identity p { color: #637087; font-size: .875rem; margin-block: .35rem; }
+.history { margin-block: 3rem; }
+.history > .panel { background: transparent; padding: 0; }
+.history .controls { background: transparent; padding: 0; gap: 1.5rem; }
+.history figure { padding-block: 1.5rem; }
+.history figcaption { color: #637087; font-size: .875rem; }
+.history .controls strong { display: block; font-size: 1.35rem; color: #243044; font-variant-numeric: tabular-nums; }
+.history select { background: #f4f6f9; border-color: transparent; border-radius: 10px; }
+.quote-grid { grid-template-columns: 1fr; }
+.quote-grid > .panel { background: white; border-top: 1px solid #e8edf2; border-radius: 0; padding: 1.75rem 0; }
+.quote-grid > .panel > h3 { font-size: 1.35rem; }
+.derived-price { background: #f7f5fc; border-left: 3px solid #9176b6; }
+.maintenance { margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid #e8edf2; font-size: .9rem; }
+.maintenance > h2 { margin-top: 0; color: #637087; }
+.summary-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); }
+.summary-grid .panel { background: transparent; padding: .75rem 0; }
+.summary-grid h3 { font-size: .875rem; font-weight: 500; color: #637087; }
+.summary-grid p { font-size: 1.8rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+button, input, select, textarea { border-radius: 9px; }
+button { border-color: #e1e6ed; background: #f4f6f9; }
+.controls { background: #f7f9fb; border-radius: 12px; }
+.status-label { border: 0; border-radius: 6px; font-weight: 500; }
+.table-scroll { border-color: #edf0f4; border-radius: 12px; }
+th { background: #f7f9fb; color: #637087; font-weight: 600; }
+th, td { border-color: #edf0f4; }
+@media (max-width: 40rem) {
+ main { margin-top: 2rem; }
+ .nav-secondary { margin-left: 0; width: 100%; }
+ .catalog-search label { display: block; }
+ .catalog-search input { margin-top: .4rem; }
+ .price-hero .price { font-size: 2.75rem; }
+ .panel { padding: 1.1rem; }
+ .history .controls { gap: .75rem; }
+}
+
+.status-label[data-state=decreased] { background: #eaf5ef; color: #24553c; }
+.status-label[data-state=increased] { background: #fff0ef; color: #852d27; }
+.price-hero > p:not(.price):not(.eyebrow) { color: #637087; font-size: .9rem; }

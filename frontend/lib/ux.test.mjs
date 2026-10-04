@@ -36,3 +36,31 @@ test('actions, loading and result announcements retain explicit semantic labels'
  const listing=read('../app/listings/[id]/page.tsx');assert.match(listing,/Observed current price/);assert.match(listing,/Tracking:/);assert.match(listing,/Freshness:/);
  const effective=read('../app/products/[id]/promotion-view.tsx');assert.match(effective,/Derived EffectivePrice/);assert.match(effective,/Possible cashback/);
 });
+
+test('visual treatments retain conditional-price language and complete audit facts',()=>{
+ const read=p=>readFileSync(new URL(p,import.meta.url),'utf8');
+ const effective=read('../app/products/[id]/promotion-view.tsx');
+ assert.match(effective,/panel derived-price/);
+ assert.match(effective,/Conditional savings and cashback are not guaranteed/);
+ const audit=read('../app/products/[id]/quality-view.tsx');
+ assert.ok(audit.includes('className="timestamp">{o.observed_at}'));
+ assert.ok(audit.includes('className="numeric">{price(a,o.offer_price)}'));
+ assert.ok(audit.includes("{a.valid?'Valid':'Invalidated'}"));
+ const css=read('../app/globals.css');
+ assert.match(css,/\.numeric[^}]*text-align: right/);
+ assert.match(css,/\.catalog-search form[^}]*flex-wrap: wrap/);
+ assert.match(css,/overflow-wrap: anywhere/);
+ assert.match(css,/input, select, textarea[^}]*max-width: 100%/);
+});
+
+test('consumer hierarchy places history before maintenance and retains advanced tools',()=>{
+ const read=p=>readFileSync(new URL(p,import.meta.url),'utf8');
+ const product=read('../app/products/[id]/page.tsx');
+ assert.ok(product.indexOf('className="price-hero"') < product.indexOf('<HistoryView'));
+ assert.ok(product.indexOf('<HistoryView') < product.indexOf('<ListingComparison prices='));
+ assert.ok(product.indexOf('<ListingComparison prices=') < product.indexOf('<ArchiveControls'));
+ const listing=read('../app/listings/[id]/page.tsx');
+ for(const tool of ['RecordPrice','CSVImport','CSVExport','QualityView','AttemptHistory']) assert.ok(listing.indexOf('<HistoryView') < listing.indexOf('<'+tool+' '));
+ assert.match(read('../app/products/[id]/listing-comparison.tsx'), /<summary>Listing tools &amp; audit<\/summary>/);
+ assert.match(read('../app/layout.tsx'), /href="#catalog-search"/);
+});

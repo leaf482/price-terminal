@@ -6,7 +6,7 @@ export default function GlobalSearch() {
     const [query, setQuery] = useState(''), [data, setData] = useState<SearchResults | null>(null), [busy, setBusy] = useState(false), [error, setError] = useState('');
     const request = useRef<AbortController | null>(null);
     useEffect(() => () => { request.current?.abort(); request.current = null; }, []);
-    return <nav aria-label="Global catalog search" className="panel"><form onSubmit={async e => {
+    return <nav id="catalog-search" aria-label="Global catalog search" className="panel catalog-search"><form onSubmit={async e => {
         e.preventDefault(); request.current?.abort(); const controller = new AbortController(); request.current = controller;
         setData(null); setError('');
         if (!query.trim()) { setBusy(false); setError('Enter a search query.'); return; }

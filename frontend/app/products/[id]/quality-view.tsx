@@ -48,7 +48,7 @@ export function AuditTable({ records, busy, onInvalidate }: { records: Audit[]; 
     return <div className="table-scroll" role="region" aria-label="Observation audit table" tabIndex={0}><table><caption>Observation history audit — newest first, including invalidated facts. Charts and current prices exclude invalidated observations.</caption>
         <thead><tr>{['Observed time','Offer price','Sale price','Retailer list price','MSRP','Currency','Stock','Source / provenance','Validity','Detail'].map(label => <th scope="col" key={label}>{label}</th>)}</tr></thead>
         <tbody>{records.map(a => { const o=a.observation; return <tr key={a.id}>
-            <td>{o.observed_at}</td><td>{price(a,o.offer_price)}</td><td>{price(a,o.sale_price)}</td><td>{price(a,o.retailer_list_price)}</td><td>{price(a,o.msrp)}</td><td>{o.currency || 'Missing'}</td><td>{o.stock.replaceAll('_',' ')}</td><td style={{whiteSpace:'pre-wrap'}}>{o.source}</td><td>{a.valid?'Valid':'Invalidated'}</td><td><AuditRecord record={a} busy={busy} onInvalidate={onInvalidate}/></td>
+            <td className="timestamp">{o.observed_at}</td><td className="numeric">{price(a,o.offer_price)}</td><td className="numeric">{price(a,o.sale_price)}</td><td className="numeric">{price(a,o.retailer_list_price)}</td><td className="numeric">{price(a,o.msrp)}</td><td>{o.currency || 'Missing'}</td><td>{o.stock.replaceAll('_',' ')}</td><td style={{whiteSpace:'pre-wrap'}}>{o.source}</td><td><span className="status-label" data-state={a.valid?'valid':'invalidated'}>{a.valid?'Valid':'Invalidated'}</span></td><td><AuditRecord record={a} busy={busy} onInvalidate={onInvalidate}/></td>
         </tr>; })}</tbody>
     </table></div>;
 }

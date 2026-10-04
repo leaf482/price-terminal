@@ -45,6 +45,7 @@ test('prototype-named Retailers outside the initial batch are fetched, rendered 
   const code=ts.transpileModule(readFileSync(new URL('../app/products/[id]/page.tsx',import.meta.url),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX,target:ts.ScriptTarget.ES2022}}).outputText;
   runInNewContext(code,{exports,require(name){
    if(name==='../../../lib/catalog')return{parseRetailers};
+   if(name==='../../../lib/prices')return prices;
    if(name==='../../../lib/api')return{parseProduct:x=>x,parsePrices:x=>x,api:async(path,parse)=>{calls.push(path);const value=path==='/products/p'?{id:'p',name:'Product',brand:'',model:''}:path==='/products/p/prices'?data:path==='/retailers?limit=100'?batch:path===`/retailers/${id}`?{id,name:'Alpha real shop'}:assert.fail(`Unexpected request ${path}`);return parse(value)}};
    if(name==='next/link'||name.startsWith('./')||name.startsWith('../../catalog/'))return{default:component};return require(name);
   }});

@@ -15,7 +15,7 @@ export default function Overview({ data }: { data: RetailerOverview }) {
             return <article className="panel" key={c.listing.id}><h2><Link href={`/products/${encodeURIComponent(p.id)}#${encodeURIComponent(c.listing.id)}`}>{p.name || p.id}</Link></h2>
                 <p>{p.brand} · {p.model} · Product ID: {p.id}{p.archived && ' · Archived Product'}</p><p><Link href={`/listings/${encodeURIComponent(c.listing.id)}`}>Listing: {c.listing.id}</Link></p>
                 {url && <a href={url} target="_blank" rel="noreferrer">{c.listing.url}</a>}
-                <p>Tracking: {c.listing.tracking_enabled === false ? 'disabled' : 'enabled'}</p>
+                <p className="status-label">Tracking: {c.listing.tracking_enabled === false ? 'disabled' : 'enabled'}</p>
                 <p>Observed price: {price ? formatPrice(price.amount, price.currency) : 'Price unavailable'} · {price?.label || 'No offer or sale price'}</p>
                 <p>Stock: {c.observation?.stock.replaceAll('_', ' ') || 'unknown'}</p>
                 <p>Latest valid observation: {c.observation?.observed_at || 'None'} · {c.freshness}</p>

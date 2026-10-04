@@ -12,7 +12,7 @@ export function ProductCard({ row }: { row: Summary }) {
     return <article className="panel">
         <p className="muted">{p.brand || 'Brand not specified'} · {p.model || 'Model not specified'}</p>
         <h2><Link href={`/products/${encodeURIComponent(p.id)}`}>{p.name || p.id}</Link></h2>
-        {p.archived && <p>Archived</p>}
+        {p.archived && <p className="status-label">Archived</p>}
         <p>{row.listing_count} Listings</p>
         <p className="price">{row.best_price ? formatPrice(row.best_price.minor_units, row.best_price.currency) : 'No comparable price'}</p>
         <p>{row.best_price ? `Best observed ${row.best_price.basis.replaceAll('_', ' ')}` : row.comparison_status.replaceAll('_', ' ')}</p>

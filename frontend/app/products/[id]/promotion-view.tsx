@@ -45,7 +45,7 @@ function EffectiveResult({ listingID, query }: { listingID: string; query: strin
     return <EffectiveSummary data={data}/>;
 }
 export function EffectiveSummary({ data }: { data: Effective }) {
-    return <div className="panel"><h4>Derived EffectivePrice — {data.status}</h4><p>{data.reason.replaceAll("_", " ")}</p>
+    return <div className="panel derived-price"><h4>Derived EffectivePrice — {data.status}</h4><p>{data.reason.replaceAll("_", " ")}</p>
         {data.base && <p>Base observed price: {formatPrice(data.base.minor_units, data.base.currency)}</p>}
         <p className="muted">Observed: {data.observation?.observed_at || "unavailable"} · Stock: {data.observation?.stock || "unknown"}<br/>Calculated: {data.calculated_at}</p>
         {data.status === "available" ? <>

@@ -25,15 +25,16 @@ export default async function ListingPage({ params }: { params: Promise<{ id: st
     return <main><nav><Link href={`/products/${encodeURIComponent(l.product_id)}`}>← Product detail</Link> · <Link href={`/retailers/${encodeURIComponent(l.retailer_id)}`}>Retailer detail</Link></nav>
         <ListingIdentity listing={l} product={product} retailer={retailer}/>
         <ObservedPrice current={c}/>
-        <CollectionControls id={l.id} status={c.collection} trackingEnabled={l.tracking_enabled !== false}/>
-        <AttemptHistory key={`attempts-${revision}`} listingID={l.id}/>
-        <TrackingControls id={l.id} enabled={l.tracking_enabled !== false}/>
-        <RecordPrice listingID={l.id}/><CSVImport listingID={l.id}/><CSVExport listingID={l.id}/>
-        {/* Refresh client reads even for backdated imports or newly invalidated facts. */}
         <HistoryView key={`history-${revision}`} listings={[{ id: l.id, retailer: retailer?.name || l.retailer_id }]}/>
-        <QualityView key={`quality-${revision}`} listingID={l.id} table/>
         <PromotionView key={`promotion-${revision}`} listingID={l.id}/>
         <AlertView key={`alerts-${revision}`} listingID={l.id}/>
+        <section className="maintenance"><h2>Listing tools &amp; audit</h2>
+        <CollectionControls id={l.id} status={c.collection} trackingEnabled={l.tracking_enabled !== false}/>
+        <TrackingControls id={l.id} enabled={l.tracking_enabled !== false}/>
+        <RecordPrice listingID={l.id}/><CSVImport listingID={l.id}/><CSVExport listingID={l.id}/>
+        <AttemptHistory key={`attempts-${revision}`} listingID={l.id}/>
+        <QualityView key={`quality-${revision}`} listingID={l.id} table/>
+        </section>
     </main>;
 }
 
@@ -45,7 +46,7 @@ function ListingIdentity({ listing: l, product, retailer }: {
     retailer: Retailer | null;
 }) {
     const url = safeSource(l.url);
-    return <>
+    return <header className="listing-identity">
         <h1>Listing {l.id}</h1>
         <p>Product: {product?.name || l.product_id} · {product?.brand} · {product?.model}</p>
         {!product && <p role="alert">Product metadata is unavailable. Stored Product ID: {l.product_id}</p>}
@@ -54,18 +55,18 @@ function ListingIdentity({ listing: l, product, retailer }: {
         <p>Source URL: {url ? <a href={url} target="_blank" rel="noreferrer">{l.url}</a> : l.url}</p>
         <p>Retailer product ID: {l.retailer_product_id || 'Not supplied'}</p>
         <p>Source identity is read-only. Create a new Listing for source changes.</p>
-        <p>Tracking: {l.tracking_enabled === false ? 'disabled' : 'enabled'}</p>
-    </>;
+        <p className="status-label">Tracking: {l.tracking_enabled === false ? 'disabled' : 'enabled'}</p>
+    </header>;
 }
 
 function ObservedPrice({ current: c }: { current: Current }) {
     const o = c.observation, price = basis(o);
-    return <>
+    return <section className="price-hero">
         <h2>Observed current price</h2><p className="price">{price ? formatPrice(price.amount, price.currency) : 'Price unavailable'}</p>
         <p>{price?.label || 'No offer or sale price'} · Stock: {o?.stock.replaceAll('_', ' ') || 'unknown'}</p>
         <p>Latest valid observation: {o?.observed_at || 'None'} · Freshness: {c.freshness}</p><p>Observation source: {o?.source || 'Unavailable'}</p>
         {o?.msrp !== undefined && <p>MSRP: {formatPrice(o.msrp, o.currency!)} · {o.msrp_source}</p>}
         {o?.retailer_list_price !== undefined && <p>Retailer list: {formatPrice(o.retailer_list_price, o.currency!)}</p>}
         {o?.sale_price !== undefined && o.offer_price !== undefined && <p>Sale price: {formatPrice(o.sale_price, o.currency!)}</p>}
-    </>;
+    </section>;
 }
