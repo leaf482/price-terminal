@@ -15,9 +15,10 @@ import (
 	"github.com/leaf482/price-terminal/backend/provider"
 )
 
-// Store is the existing persistence functionality needed for a single write.
+// ErrListingLookup identifies a failed stored-Listing lookup while retaining its cause.
 var ErrListingLookup = errors.New("collection listing lookup failed")
 
+// Store is the persistence functionality needed for a single observation write.
 type Store interface {
 	GetListing(context.Context, string) (domain.Listing, error)
 	InsertPriceObservation(context.Context, string, domain.PriceObservation) error

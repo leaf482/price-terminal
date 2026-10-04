@@ -38,7 +38,7 @@ type Provider interface {
 
 // ValidateResult checks a successful collection only. Callers must first check
 // Collect's error; even a valid-looking observation must be ignored on failure.
-// Providers and future ingestion can share this check without database access.
+// Providers and ingestion share this check without database access.
 func ValidateResult(listing domain.Listing, observation domain.PriceObservation) error {
 	if err := listing.Validate(); err != nil {
 		return fmt.Errorf("provider listing: %w", err)

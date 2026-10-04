@@ -46,7 +46,8 @@ type Outcome struct {
 // before any work. Otherwise outcomes always match input order and length. The
 // returned error is reserved for parent cancellation; item errors live in outcomes.
 // Cancellation preserves completed outcomes and marks unstarted jobs with ctx.Err().
-// There are no automatic retries or persistent operational records.
+// Run performs no automatic retries or audit writes; the collector records
+// persistent attempt metadata through OnComplete.
 func Run(ctx context.Context, store Store, jobs []Job, perListingTimeout time.Duration) ([]Outcome, error) {
 	if len(jobs) > MaxBatchSize {
 		return nil, fmt.Errorf("ingest batch: maximum size is %d", MaxBatchSize)

@@ -75,8 +75,9 @@ func priceAmount(money domain.Money, present bool) any {
 
 // ListPriceObservations returns one listing's history oldest first. Exact time
 // ties use result ID in bytewise C collation, independent of insertion order.
-// No observations returns an empty slice. Bounded/time-range queries are deferred
-// to the historical API task; this method performs no updates or deletions.
+// No observations returns an empty slice. This unbounded persistence read includes
+// invalidated observations; the HTTP history API uses bounded PriceHistory instead.
+// This method performs no updates or deletions.
 func (s *Store) ListPriceObservations(ctx context.Context, listingID string) ([]domain.PriceObservation, error) {
 	if strings.TrimSpace(listingID) == "" {
 		return nil, fmt.Errorf("list observations: listing ID is required")
