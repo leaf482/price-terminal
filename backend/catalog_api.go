@@ -2,12 +2,15 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/leaf482/price-terminal/backend/domain"
+	"github.com/leaf482/price-terminal/backend/persistence"
 )
 
 type catalogStore interface {
@@ -48,6 +51,24 @@ func registerCatalogRoutes(mux *http.ServeMux, store catalogStore) {
 	mux.HandleFunc("POST /listings", api.createListing)
 	mux.HandleFunc("GET /listings/{id}", api.getListing)
 	mux.HandleFunc("GET /products/{productID}/listings", api.listListings)
+}
+
+func catalogLimit(w http.ResponseWriter, r *http.Request) (int, bool) {
+	query, err := url.ParseQuery(r.URL.RawQuery)
+	limit, ok := listLimit(query["limit"], persistence.MaxCatalogListLimit)
+	if err != nil || !ok {
+		productError(w, 400, "invalid_limit", "limit must be an integer from 1 to 100")
+		return 0, false
+	}
+	return limit, true
+}
+
+func catalogReadError(w http.ResponseWriter, err error, resource string) {
+	if errors.Is(err, sql.ErrNoRows) {
+		productError(w, 404, resource+"_not_found", resource+" not found")
+	} else {
+		productError(w, 500, "internal_error", "unable to read "+resource)
+	}
 }
 
 func (api catalogAPI) createRetailer(w http.ResponseWriter, r *http.Request) {
