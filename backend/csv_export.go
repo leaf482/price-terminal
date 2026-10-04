@@ -7,7 +7,9 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
+	"unicode"
 
 	"github.com/leaf482/price-terminal/backend/domain"
 	"github.com/leaf482/price-terminal/backend/persistence"
@@ -23,6 +25,18 @@ func csvMoney(m domain.Money, present bool) string {
 		return ""
 	}
 	return strconv.FormatInt(m.MinorUnits, 10)
+}
+
+// Only exported untrusted text is escaped; stored facts and numeric cells stay intact.
+func csvText(value string) string {
+	candidate := strings.TrimLeftFunc(value, unicode.IsSpace)
+	if len(value) > 0 && strings.ContainsRune("\t\r\n", rune(value[0])) {
+		return "'" + value
+	}
+	if candidate != "" && strings.ContainsRune("=+-@＝＋－＠", []rune(candidate)[0]) {
+		return "'" + value
+	}
+	return value
 }
 
 func csvExportHandler(store csvExportStore) http.HandlerFunc {
@@ -55,7 +69,7 @@ func csvExportHandler(store csvExportStore) http.HandlerFunc {
 			if row.InvalidatedAt != nil {
 				invalidated = row.InvalidatedAt.UTC().Format(time.RFC3339Nano)
 			}
-			_ = csvWriter.Write([]string{row.ID, o.ObservedAt().Format(time.RFC3339Nano), o.Source(), string(currency), csvMoney(o.OfferPrice()), csvMoney(o.SalePrice()), csvMoney(o.RetailerListPrice()), csvMoney(o.MSRP()), o.MSRPSource(), string(o.Stock()), strconv.FormatBool(row.InvalidatedAt == nil), invalidated, row.Reason})
+			_ = csvWriter.Write([]string{csvText(row.ID), o.ObservedAt().Format(time.RFC3339Nano), csvText(o.Source()), string(currency), csvMoney(o.OfferPrice()), csvMoney(o.SalePrice()), csvMoney(o.RetailerListPrice()), csvMoney(o.MSRP()), csvText(o.MSRPSource()), string(o.Stock()), strconv.FormatBool(row.InvalidatedAt == nil), invalidated, csvText(row.Reason)})
 		}
 		csvWriter.Flush()
 		if csvWriter.Error() != nil {

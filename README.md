@@ -253,9 +253,14 @@ Timestamps represent stored instants in UTC RFC3339 with nanosecond precision
 where present. Original timestamp text in CSV-import provenance is retained.
 Rows sort chronologically by observation timestamp (including nanoseconds), then
 by observation ID in bytewise ascending order. Commas, quotes and newlines in
-text are CSV-escaped without changing the text. Treat metadata as text when
-opening it in spreadsheet software; it is not rewritten as spreadsheet formulas
-or escaped with additional apostrophes.
+text are CSV-escaped. Formula-like exported IDs, provenance, MSRP evidence, and
+invalidation reasons receive a leading apostrophe (including formula prefixes after
+whitespace and leading tab/CR/LF). Numeric values and stored facts are unchanged.
+This is a spreadsheet-safety presentation escape, not a round-trip encoding.
+Spreadsheet save/reopen behavior varies; do not enable formulas in untrusted exports.
+See [OWASP CSV injection guidance](https://owasp.org/www-community/attacks/CSV_Injection). Treat metadata as text when
+opening it in spreadsheet software. The original values remain available in the
+observation audit API and database backups.
 
 The maximum is **10,000 observations per Listing**, including invalidated rows.
 An oversized Listing returns HTTP 422 `export_limit` with no partial CSV. An empty
@@ -1025,3 +1030,14 @@ and unstarted work create no attempt records. There are no automatic retries.
 A disconnected client may not receive results even though some writes succeeded;
 reload health and inspect attempt history before explicitly retrying. Selections
 persist across filters; only selected IDs are sent. Health reloads after a batch.
+
+### HTTP connection bounds
+
+The backend allows 5 seconds for request headers, 30 seconds to read a request,
+and 60 seconds for idle keep-alive connections. JSON bodies remain limited to
+64 KiB and CSV imports to 1 MiB. Existing handler error codes remain unchanged.
+A fixed server write timeout is intentionally omitted because a sequential bulk
+collection can take 20 configured collection timeouts; DB/provider operations use
+contexts. Keep this unauthenticated MVP behind a trusted access boundary.
+The frontend uses its same-origin `/api` proxy; the backend does not grant CORS
+access to other origins. CORS is not authentication or CSRF protection.

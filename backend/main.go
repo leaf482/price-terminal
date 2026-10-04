@@ -72,12 +72,7 @@ func run() error {
 	defer stop()
 	collectorDone := make(chan error, 1)
 	go func() { collectorDone <- runtime.Run(ctx) }()
-	server := &http.Server{
-		Addr:              address,
-		Handler:           newHandler(db.PingContext, store, store, currentAPI{store: store, status: runtime.Status, collect: runtime.Collect, bulkCollect: runtime.CollectBulk, maxAge: maxAge, now: time.Now}),
-		BaseContext:       func(net.Listener) context.Context { return ctx },
-		ReadHeaderTimeout: 5 * time.Second,
-	}
+	server := newHTTPServer(ctx, address, newHandler(db.PingContext, store, store, currentAPI{store: store, status: runtime.Status, collect: runtime.Collect, bulkCollect: runtime.CollectBulk, maxAge: maxAge, now: time.Now}))
 
 	log.Printf("listening on http://%s", server.Addr)
 	serverDone := make(chan error, 1)
@@ -99,4 +94,17 @@ func run() error {
 		return serveErr
 	}
 	return shutdownErr
+}
+
+func newHTTPServer(ctx context.Context, address string, handler http.Handler) *http.Server {
+	return &http.Server{
+		Addr:              address,
+		Handler:           handler,
+		BaseContext:       func(net.Listener) context.Context { return ctx },
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		IdleTimeout:       60 * time.Second,
+		// Bulk collection can take 20 configured per-Listing timeouts. A fixed global
+		// WriteTimeout would truncate valid partial results; handlers retain deadlines.
+	}
 }

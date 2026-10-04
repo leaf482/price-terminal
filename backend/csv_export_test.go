@@ -82,3 +82,41 @@ func TestCSVExport(t *testing.T) {
 		})
 	}
 }
+
+func TestCSVTextFormulaProtection(t *testing.T) {
+	for _, value := range []string{"=1+1", "+cmd", "-2+3", "@SUM(1)", "  =1", "\ttext", "\rtext", "\ntext", "＝1", "＋1", "－1", "＠x"} {
+		if got := csvText(value); got != "'"+value {
+			t.Errorf("%q => %q", value, got)
+		}
+	}
+	for _, value := range []string{"", "0", "plain", "text, \"quoted\"\nline", "already 'quoted"} {
+		if got := csvText(value); got != value {
+			t.Errorf("changed safe text %q", got)
+		}
+	}
+}
+
+func TestCSVExportProtectsOnlyText(t *testing.T) {
+	at := time.Now().UTC()
+	o, err := domain.NewPriceObservation(domain.PriceObservationInput{ListingID: "l", ObservedAt: at, Source: "=source", Stock: domain.StockUnknown, OfferPrice: &domain.Money{Currency: domain.USD}, MSRP: &domain.Money{Currency: domain.USD}, MSRPSource: "+evidence"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	store := exportStub{rows: []persistence.ObservationAudit{{ID: "@id", Observation: o, InvalidatedAt: &at, Reason: "-reason"}}}
+	request := httptest.NewRequest("GET", "/listings/l/observations/export", nil)
+	request.SetPathValue("id", "l")
+	w := httptest.NewRecorder()
+	csvExportHandler(store)(w, request)
+	rows, err := csv.NewReader(w.Body).ReadAll()
+	if err != nil || w.Code != 200 {
+		t.Fatal(w, err)
+	}
+	for col, want := range map[int]string{0: "'@id", 2: "'=source", 4: "0", 5: "", 7: "0", 8: "'+evidence", 12: "'-reason"} {
+		if rows[1][col] != want {
+			t.Fatalf("column %d: %q", col, rows[1][col])
+		}
+	}
+	if o.Source() != "=source" || store.rows[0].Reason != "-reason" {
+		t.Fatal("original facts changed")
+	}
+}
